@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090d18">
+  <title>KreTeX AI | Intelligent Trading</title>
+  <style>
+    :root {
+      --bg: #090d18;
+      --panel: #101827;
+      --line: #233047;
+      --text: #edf3ff;
+      --muted: #91a0b9;
+      --green: #32d6a0;
+      --red: #ff6d82;
+      --purple: #9c83ff;
+      --cyan: #52d7ee;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 17px 5%;
+      border-bottom: 1px solid var(--line);
+      background: #0c1220;
+    }
+    .brand { font-size: 23px; font-weight: 850; letter-spacing: -.8px; }
+    .brand span { color: var(--cyan); }
+    .status { color: var(--green); font-size: 12px; }
+
+    .hero { padding: 30px 5% 18px; }
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: 800;
+    }
+    h1 { font-size: clamp(25px, 4vw, 38px); margin: 10px 0; }
+    .subtitle { color: var(--muted); font-size: 14px; }
+
+    .market-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0 5% 22px;
+    }
+    .card, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+    .card { padding: 16px; min-width: 0; }
+    .label { color: var(--muted); font-size: 12px; }
+    .value { font-size: 21px; font-weight: 750; margin-top: 9px; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 290px;
+      gap: 16px;
+      padding: 0 5% 30px;
+    }
+    .panel { padding: 18px; min-width: 0; }
+    .panel-head {
+      display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+    h2 { font-size: 17px; margin: 0; }
+    select, input {
+      background: #0b1220; color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px; padding: 9px;
+      max-width: 100%;
+    }
+    .chart {
+      position: relative;
+      height: 310px;
+      margin-top: 18px;
+      overflow: hidden;
+      border-radius: 10px;
+      background:
+        linear-gradient(#23304755 1px, transparent 1px),
+        linear-gradient(90deg, #23304755 1px, transparent 1px);
+      background-size: 48px 42px;
+    }
+    .chart svg { width: 100%; height: 100%; display: block; }
+    .chart-note {
+      position: absolute; top: 12px; left: 12px;
+      color: var(--muted); font-size: 11px;
+    }
+    .chart-bottom {
+      display: flex; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px; margin-top: 12px;
+      color: var(--muted); font-size: 12px;
+    }
+    .tag {
+      padding: 6px 9px; border-radius: 7px;
+      background: #1c2940; color: var(--cyan); font-size: 11px;
+    }
+    .order-title { margin: 22px 0 12px; }
+    .field { display: grid; gap: 7px; margin: 13px 0; }
+    .field label { color: var(--muted); font-size: 12px; }
+    .trade-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .trade-buttons button {
+      padding: 12px 6px; border: 0; border-radius: 8px;
+      color: #06130f; background: var(--green); font-weight: 800;
+    }
+    .trade-buttons button:last-child {
+      color: white; background: #b84760;
+    }
+    .notice {
+      margin-top: 12px; padding: 11px;
+      border-radius: 8px; background: #1a2235;
+      color: var(--muted); font-size: 11px; line-height: 1.6;
+    }
+    .section { padding: 0 5% 30px; }
+    .section h2 { margin-bottom: 14px; }
+    .insight {
+      padding: 17px; border-radius: 12px;
+      border: 1px solid #51417e; background: #17152b;
+      color: #dcd4ff; font-size: 13px; line-height: 1.7;
+    }
+    footer {
+      padding: 24px 5%; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 12px;
+    }
+
+    @media (max-width: 800px) {
+      .market-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+      .chart { height: 270px; }
+    }
+    @media (max-width: 400px) {
+      .topbar, .hero, .market-strip, .workspace, .section, footer {
+        padding-left: 14px; padding-right: 14px;
+      }
+      .value { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">KreTeX<span> AI</span></div>
+    <div class="status">● PLATFORM PREVIEW</div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">INTELLIGENCE MEETS THE MARKET</div>
+    <h1>Trade with a clearer perspective.</h1>
+    <div class="subtitle">Market analytics, technical charts and risk-aware trading tools.</div>
+  </section>
+
+  <section class="market-strip">
+    <div class="card">
+      <div class="label">BTC / USD</div>
+      <div class="value" id="btcPrice">$67,420.50</div>
+      <div class="label up">Preview value</div>
+    </div>
+    <div class="card">
+      <div class="label">ETH / USD</div>
+      <div class="value">$3,420.80</div>
+      <div class="label up">Preview value</div>
+    </div>
+    <div class="card">
+      <div class="label">Market state</div>
+      <div class="value">Analyzing</div>
+      <div class="label">Demo environment</div>
+    </div>
+    <div class="card">
+      <div class="label">Trading mode</div>
+      <div class="value">Paper</div>
+      <div class="label">Real orders disabled</div>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Market chart</h2>
+          <div class="label" style="margin-top:7px">BTC / USD · Illustrative chart</div>
+        </div>
+        <select id="timeframe" aria-label="Chart timeframe">
+          <option value="1m">1 minute</option>
+          <option value="5m">5 minutes</option>
+          <option value="15m">15 minutes</option>
+          <option value="30m">30 minutes</option>
+          <option value="1h" selected>1 hour</option>
+          <option value="4h">4 hours</option>
+          <option value="1d">1 day</option>
+        </select>
+      </div>
+
+      <div class="chart">
+        <div class="chart-note" id="chartNote">Illustrative candles · 1 hour</div>
+        <svg viewBox="0 0 700 300" preserveAspectRatio="none"
+             role="img" aria-label="Illustrative candlestick chart">
+          <g stroke="#34435a" stroke-width="1">
+            <line x1="0" y1="60" x2="700" y2="60"/>
+            <line x1="0" y1="120" x2="700" y2="120"/>
+            <line x1="0" y1="180" x2="700" y2="180"/>
+            <line x1="0" y1="240" x2="700" y2="240"/>
+          </g>
+          <g id="candles"></g>
+        </svg>
+      </div>
+      <div class="chart-bottom">
+        <span>Chart preview is illustrative, not live exchange data.</span>
+        <span class="tag" id="selectedFrame">1H</span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Order ticket</h2>
+      <div class="label" style="margin-top:7px">BTC / USD · Paper mode only</div>
+
+      <div class="field">
+        <label for="orderType">Order type</label>
+        <select id="orderType">
+          <option>Market (simulation)</option>
+          <option>Limit (simulation)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="quantity">Quantity (BTC)</label>
+        <input id="quantity" type="number" min="0.0001" step="0.0001"
+               value="0.001">
+      </div>
+      <div class="field">
+        <label for="stopLoss">Stop-loss price (optional)</label>
+        <input id="stopLoss" type="number" min="0" placeholder="Enter price">
+      </div>
+      <div class="field">
+        <label for="takeProfit">Take-profit price (optional)</label>
+        <input id="takeProfit" type="number" min="0" placeholder="Enter price">
+      </div>
+
+      <div class="trade-buttons">
+        <button id="longBtn" type="button">Simulate Long</button>
+        <button id="shortBtn" type="button">Simulate Short</button>
+      </div>
+      <div class="notice" id="orderMessage">
+        Simulation only. No exchange connection or real orders.
+      </div>
+    </aside>
+  </main>
+
+  <section class="section">
+    <h2>KreTeX AI market insight</h2>
+    <div class="insight" id="insight">
+      AI analyst is not connected yet. This preview does not generate
+      verified market signals. Connect a trusted market-data source before
+      using live analysis.
+    </div>
+  </section>
+
+  <footer>
+    KreTeX AI · Independent trading platform preview ·
+    Market values and candles shown here are illustrative.
+  </footer>
+
+  <script>
+    const candleGroup = document.getElementById("candles");
+    const timeframe = document.getElementById("timeframe");
+    const chartNote = document.getElementById("chartNote");
+    const selectedFrame = document.getElementById("selectedFrame");
+    const orderMessage = document.getElementById("orderMessage");
+
+    function drawPreviewCandles() {
+      candleGroup.replaceChildren();
+      let price = 150;
+      for (let i = 0; i < 38; i++) {
+        const x = 12 + i * 17.8;
+        const open = price;
+        price += (Math.sin(i * 1.7) * 10) + (Math.cos(i * .63) * 5);
+        const close = price;
+        const high = Math.max(open, close) + 5 + (i % 4);
+        const low = Math.min(open, close) - 5 - (i % 3);
+        const color = close >= open ? "#32d6a0" : "#ff6d82";
+
+        const wick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        wick.setAttribute("x1", x + 5);
+        wick.setAttribute("x2", x + 5);
+        wick.setAttribute("y1", 300 - high);
+        wick.setAttribute("y2", 300 - low);
+        wick.setAttribute("stroke", color);
+        wick.setAttribute("stroke-width", "1.5");
+        candleGroup.appendChild(wick);
+
+        const body = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        body.setAttribute("x", x);
+        body.setAttribute("y", 300 - Math.max(open, close));
+        body.setAttribute("width", "10");
+        body.setAttribute("height", Math.max(3, Math.abs(close - open)));
+        body.setAttribute("fill", color);
+        candleGroup.appendChild(body);
+      }
+    }
+
+    timeframe.addEventListener("change", () => {
+      const labels = {
+        "1m": "1 minute", "5m": "5 minutes",
+        "15m": "15 minutes", "30m": "30 minutes",
+        "1h": "1 hour", "4h": "4 hours", "1d": "1 day"
+      };
+      chartNote.textContent = "Illustrative candles · " + labels[timeframe.value];
+      selectedFrame.textContent = timeframe.value.toUpperCase();
+      drawPreviewCandles();
+    });
+
+    function simulateOrder(direction) {
+      const quantity = Number(document.getElementById("quantity").value);
+      const sl = document.getElementById("stopLoss").value;
+      const tp = document.getElementById("takeProfit").value;
+
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        orderMessage.textContent = "Enter a valid quantity greater than zero.";
+        return;
+      }
+      orderMessage.textContent =
+        direction + " simulation prepared for " + quantity +
+        " BTC. No order was sent to an exchange." +
+        (sl ? " Stop-loss entered." : "") +
+        (tp ? " Take-profit entered." : "");
+    }
+
+    document.getElementById("longBtn")
+      .addEventListener("click", () => simulateOrder("Long"));
+    document.getElementById("shortBtn")
+      .addEventListener("click", () => simulateOrder("Short"));
+
+    drawPreviewCandles();
+  </script>
+</body>
+</html>
