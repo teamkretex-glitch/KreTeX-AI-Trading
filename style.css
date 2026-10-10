@@ -1,0 +1,234 @@
+:root {
+  --brand-green: #2CB72C;
+  --bg-dark: #0f1115;
+  --card-dark: #171a21;
+  --text: #e6e8ec;
+  --up: #2CB72C;
+  --down: #e5484d;
+
+  --border: #252b36;
+  --muted: #9aa4b2;
+  --input-bg: #10141b;
+  --hover-green: #239923;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Base */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-dark);
+  color: var(--text);
+  font-family: Inter, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Main panels and cards */
+.card,
+.panel,
+.market-card,
+.market-strip,
+.workspace,
+.chart-container,
+.order-panel {
+  background: var(--card-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+/* Brand and links */
+.brand,
+.logo,
+.text-green {
+  color: var(--brand-green);
+}
+
+a:hover {
+  color: var(--brand-green);
+}
+
+/* Buttons */
+button,
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: #202630;
+  color: var(--text);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary,
+.btn-buy,
+.buy-button,
+.long-button {
+  background: var(--brand-green);
+  color: #071007;
+  border-color: var(--brand-green);
+  font-weight: 700;
+}
+
+.btn-primary:hover,
+.btn-buy:hover,
+.buy-button:hover,
+.long-button:hover {
+  background: var(--hover-green);
+}
+
+.btn-sell,
+.btn-danger,
+.sell-button,
+.short-button {
+  background: var(--down);
+  color: #fff;
+  border-color: var(--down);
+}
+
+/* Profit and loss */
+.profit,
+.positive,
+.price-up {
+  color: var(--up);
+}
+
+.loss,
+.negative,
+.price-down {
+  color: var(--down);
+}
+
+/* Forms */
+input,
+select,
+textarea {
+  width: 100%;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 2px rgba(44, 183, 44, 0.15);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Navigation */
+header,
+.topbar,
+nav {
+  background: #0b0e13;
+  border-bottom: 1px solid var(--border);
+}
+
+nav a.active {
+  color: var(--brand-green);
+  border-bottom: 2px solid var(--brand-green);
+}
+
+/* Cards and small labels */
+.muted,
+.subtitle,
+.secondary-text {
+  color: var(--muted);
+}
+
+.badge-green {
+  background: rgba(44, 183, 44, 0.12);
+  color: var(--brand-green);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+.badge-red {
+  background: rgba(229, 72, 77, 0.12);
+  color: var(--down);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+/* Responsive layout */
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .workspace,
+  .dashboard-grid,
+  .market-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .panel {
+    border-radius: 10px;
+  }
+
+  th,
+  td {
+    padding: 9px 7px;
+    font-size: 13px;
+  }
+}
