@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,378 +6,153 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f1115">
   <title>KreTeX AI Trading</title>
-
   <link rel="stylesheet" href="style.css">
-
-  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="./script.js" defer></script>
-
-  <style>
-    :root {
-      --brand-green: #2CB72C;
-      --bg-dark: #0f1115;
-      --card-dark: #171a21;
-      --text: #e6e8ec;
-      --up: #2CB72C;
-      --down: #e5484d;
-      --border: #292f3a;
-      --muted: #929baa;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: var(--bg-dark);
-      color: var(--text);
-      font: 14px Arial, sans-serif;
-    }
-
-    button, select { font: inherit; }
-
-    button {
-      cursor: pointer;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 9px 12px;
-      background: #202630;
-      color: var(--text);
-    }
-
-    button.active, .primary {
-      background: var(--brand-green);
-      color: #071007;
-      border-color: var(--brand-green);
-      font-weight: bold;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 16px 20px;
-      background: #0b0e13;
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-
-    .brand { color: var(--brand-green); font-size: 21px; font-weight: bold; }
-    .muted { color: var(--muted); }
-    .status { color: var(--down); }
-    .status.live { color: var(--up); }
-    .status.error { color: var(--down); }
-
-    main { max-width: 1500px; margin: auto; padding: 20px; }
-
-    .markets {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin: 18px 0;
-    }
-
-    .card, .panel {
-      background: var(--card-dark);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      min-width: 0;
-    }
-
-    .label { color: var(--muted); font-size: 12px; }
-    .value { font-size: 21px; font-weight: bold; margin: 8px 0; overflow-wrap: anywhere; }
-    .up { color: var(--up); }
-    .down { color: var(--down); }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
-      gap: 16px;
-      align-items: start;
-    }
-
-    .panel { margin-bottom: 16px; }
-    .panel h2 { font-size: 16px; margin: 0 0 15px; }
-
-    #market-list { list-style: none; padding: 0; margin: 0; }
-    #market-list li {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5px;
-      padding: 12px 8px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-    }
-
-    #market-list li.active { background: #203021; border-left: 3px solid var(--brand-green); }
-    .m-sym { font-weight: bold; }
-    .m-price { text-align: right; }
-    .m-sub, .m-chg { color: var(--muted); font-size: 12px; }
-    .m-chg { text-align: right; }
-    .m-chg.up { color: var(--up); }
-    .m-chg.down { color: var(--down); }
-
-    .chart-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    #tf-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
-    #chart { width: 100%; height: 420px; }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .stat {
-      padding: 12px;
-      border-radius: 8px;
-      background: #10141b;
-      overflow-wrap: anywhere;
-    }
-
-    .stat .val { font-weight: bold; margin-top: 6px; }
-
-    .book-section { margin-top: 18px; }
-    .book-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #242a33;
-    }
-
-    #asks .row, #bids .row {
-      position: relative;
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 5px 3px;
-      overflow: hidden;
-    }
-
-    #asks .bar, #bids .bar {
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      opacity: .12;
-      pointer-events: none;
-    }
-
-    #asks .bar { background: var(--down); }
-    #bids .bar { background: var(--up); }
-    #asks .p { color: var(--down); }
-    #bids .p { color: var(--up); }
-
-    .signal-main { font-size: 23px; font-weight: bold; }
-    .notice {
-      border: 1px solid #544a27;
-      background: #242116;
-      color: #e8d69a;
-      padding: 12px;
-      border-radius: 8px;
-      line-height: 1.5;
-    }
-
-    .order-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .buy { background: var(--brand-green); color: #071007; font-weight: bold; }
-    .sell { background: var(--down); color: white; font-weight: bold; }
-
-    footer { padding: 20px; color: var(--muted); text-align: center; }
-
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      .markets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 520px) {
-      main { padding: 10px; }
-      header { padding: 14px 12px; }
-      .markets { gap: 8px; }
-      .card, .panel { padding: 12px; }
-      .value { font-size: 17px; }
-      #chart { height: 330px; }
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-  </style>
 </head>
-
 <body>
-  <header>
+  <header class="topbar">
     <div>
-      <div class="brand">KreTeX AI</div>
-      <div class="muted">Intelligent Market Terminal</div>
+      <h1>KreTeX <span>AI</span></h1>
+      <p class="subtitle">Intelligent Market Terminal</p>
     </div>
-
-    <div id="status" class="status error">
-      <span id="status-text">Connecting to market...</span>
+    <div id="status" class="status">
+      <span class="status-dot"></span>
+      <span id="status-text">Connecting...</span>
     </div>
-
-    <div class="muted">PAPER MODE · LIVE DATA</div>
   </header>
 
-  <main>
-    <section class="markets">
-      <div class="card">
-        <div class="label">BTC / USD</div>
-        <div class="value" id="btcPrice">—</div>
-        <div class="label">Delta market data</div>
+  <main class="container">
+    <section class="market-section">
+      <div class="section-heading">
+        <h2>Markets</h2>
+        <span class="muted">Select a market</span>
       </div>
 
-      <div class="card">
-        <div class="label">ETH / USD</div>
-        <div class="value" id="ethPrice">—</div>
-        <div class="label">Delta market data</div>
-      </div>
+      <div class="market-grid">
+        <button class="market-card active" data-market="BTCUSD">
+          <span>BTC / USD</span>
+          <strong id="btcPrice">—</strong>
+          <small>Bitcoin</small>
+        </button>
 
-      <div class="card">
-        <div class="label">SOL / USD</div>
-        <div class="value" id="solPrice">—</div>
-        <div class="label">Symbol availability must be verified</div>
-      </div>
+        <button class="market-card" data-market="ETHUSD">
+          <span>ETH / USD</span>
+          <strong id="ethPrice">—</strong>
+          <small>Ethereum</small>
+        </button>
 
-      <div class="card">
-        <div class="label">GOLD / XAUTUSD</div>
-        <div class="value" id="goldPrice">—</div>
-        <div class="label">Symbol availability must be verified</div>
+        <button class="market-card" data-market="SOLUSD">
+          <span>SOL / USD</span>
+          <strong id="solPrice">—</strong>
+          <small>Solana</small>
+        </button>
+
+        <button class="market-card" data-market="XAUTUSD">
+          <span>GOLD</span>
+          <strong id="goldPrice">—</strong>
+          <small>Symbol verification pending</small>
+        </button>
       </div>
     </section>
 
-    <div class="layout">
-      <section>
-        <div class="panel">
-          <div class="chart-head">
-            <div>
-              <div class="label">Selected market</div>
-              <h2 id="symbol-name">BTCUSD</h2>
-              <div id="last-price" class="value">—</div>
-              <div id="chg" class="val muted">—</div>
-            </div>
-
-            <div id="tf-buttons">
-              <button data-tf="1m">1m</button>
-              <button data-tf="5m">5m</button>
-              <button data-tf="15m" class="active">15m</button>
-              <button data-tf="1h">1h</button>
-              <button data-tf="4h">4h</button>
-              <button data-tf="1d">1D</button>
-            </div>
-          </div>
-
-          <div id="chart"></div>
-
-          <div class="stats">
-            <div class="stat">
-              <div class="label">Mark price</div>
-              <div class="val" id="mark">—</div>
-            </div>
-            <div class="stat">
-              <div class="label">24h high</div>
-              <div class="val" id="high">—</div>
-            </div>
-            <div class="stat">
-              <div class="label">24h low</div>
-              <div class="val" id="low">—</div>
-            </div>
-            <div class="stat">
-              <div class="label">Turnover</div>
-              <div class="val" id="vol">—</div>
-            </div>
+    <section class="chart-section panel">
+      <div class="chart-heading">
+        <div>
+          <h2 id="symbol-name">BTCUSD</h2>
+          <div class="price-line">
+            <strong id="last-price">—</strong>
+            <span id="chg">—</span>
           </div>
         </div>
+        <span class="muted">Delta Exchange India</span>
+      </div>
 
-        <div class="panel">
-          <h2>Order Book</h2>
-          <div class="label">Sell orders</div>
-          <div id="asks"></div>
-          <div class="book-row">
-            <span class="label">Market spread</span>
-            <strong id="spread">—</strong>
-          </div>
-          <div class="label" style="margin-top:12px">Buy orders</div>
-          <div id="bids"></div>
-        </div>
+      <div class="market-stats">
+        <div><span>Mark</span><strong id="mark">—</strong></div>
+        <div><span>High</span><strong id="high">—</strong></div>
+        <div><span>Low</span><strong id="low">—</strong></div>
+        <div><span>Turnover</span><strong id="vol">—</strong></div>
+      </div>
 
-        <div class="panel">
-          <h2>AI Market Signal</h2>
-          <div id="signal-main" class="signal-main">Analyzing</div>
-          <div id="signal-meta" class="label" style="margin-top:8px">
-            Waiting for candle data
-          </div>
-          <p class="muted">Indicator-based demo insight, not a guaranteed trading signal.</p>
-        </div>
-      </section>
+      <div class="timeframe-row" id="tf-buttons">
+        <button data-tf="1m">1m</button>
+        <button data-tf="5m">5m</button>
+        <button data-tf="15m" class="active">15m</button>
+        <button data-tf="30m">30m</button>
+        <button data-tf="1h">1h</button>
+        <button data-tf="4h">4h</button>
+        <button data-tf="1d">1D</button>
+      </div>
 
-      <aside>
-        <div class="panel">
-          <h2>Markets</h2>
-          <ul id="market-list"></ul>
-        </div>
+      <div id="chart" class="chart"></div>
+      <p class="chart-note">Market data may be delayed or unavailable for unsupported symbols.</p>
+    </section>
 
-        <div class="panel">
-          <h2>Paper Trading</h2>
-          <div class="notice">
-            Demo interface only. No real orders will be sent from these buttons.
-          </div>
+    <section class="trade-section panel">
+      <div class="section-heading">
+        <h2>Paper Trading</h2>
+        <span class="demo-badge">DEMO ONLY</span>
+      </div>
 
-          <p class="label" style="margin-top:16px">Selected market</p>
-          <div id="selected-market" class="value">BTCUSD</div>
+      <label for="demo-size">Demo quantity</label>
+      <input id="demo-size" type="number" min="1" step="1" value="1">
 
-          <label class="label" for="demo-size">Demo quantity</label>
-          <input id="demo-size" type="number" min="0" step="0.001"
-            value="0.001"
-            style="display:block;width:100%;margin:8px 0 14px;padding:10px;background:#10141b;color:#e6e8ec;border:1px solid #292f3a;border-radius:7px">
+      <div class="trade-buttons">
+        <button id="demo-long" class="buy-button">Buy / Long — Demo</button>
+        <button id="demo-short" class="sell-button">Sell / Short — Demo</button>
+      </div>
 
-          <div class="order-actions">
-            <button class="buy" id="demo-long">Long (Demo)</button>
-            <button class="sell" id="demo-short">Short (Demo)</button>
-          </div>
+      <p id="orderMessage" class="order-message" aria-live="polite">
+        Demo mode. No real orders will be placed.
+      </p>
+    </section>
 
-          <div id="orderMessage" class="muted" style="margin-top:12px" aria-live="polite">
-            Demo mode — no order placed.
-          </div>
-        </div>
-      </aside>
-    </div>
+    <section class="analysis-section panel">
+      <div class="section-heading">
+        <h2>AI Market Analysis</h2>
+        <span class="muted">EMA 9/21 · RSI 14</span>
+      </div>
+
+      <div class="signal-row">
+        <strong id="signal-main" class="signal-main">Waiting for data</strong>
+        <span class="demo-badge">INDICATOR SIGNAL</span>
+      </div>
+
+      <p id="signal-meta" class="muted">
+        Analysis will appear after candle data loads.
+      </p>
+      <p class="chart-note">
+        Bullish/Bearish signals are indicators, not guaranteed predictions.
+      </p>
+    </section>
+
+    <section class="orderbook-section panel">
+      <div class="section-heading">
+        <h2>Order Book</h2>
+        <span class="muted" id="spread">Spread —</span>
+      </div>
+
+      <div class="book-head">
+        <span>Price</span><span>Size</span>
+      </div>
+      <div id="asks" class="book-rows"></div>
+      <div class="book-divider">Asks / Bids</div>
+      <div id="bids" class="book-rows"></div>
+    </section>
+
+    <section class="watchlist-section panel">
+      <div class="section-heading">
+        <h2>Market Watchlist</h2>
+      </div>
+      <ul id="market-list" class="market-list"></ul>
+    </section>
   </main>
 
   <footer>
-    KreTeX AI · Founded by Kamlesh Rajput · Public market data ·
-    Paper trading only · No financial advice
+    <p>KreTeX AI · Founded by Kamlesh Rajput</p>
+    <p>Market data only · Real trading disabled</p>
   </footer>
 
-  <script>
-    // Demo buttons: these do not place real orders.
-    const marketList = document.getElementById("market-list");
-    const selectedMarket = document.getElementById("selected-market");
-    const message = document.getElementById("orderMessage");
-
-    if (marketList && selectedMarket) {
-      marketList.addEventListener("click", function(event) {
-        const item = event.target.closest("li[data-sym]");
-        if (item) selectedMarket.textContent = item.dataset.sym;
-      });
-    }
-
-    document.getElementById("demo-long").addEventListener("click", function() {
-      message.textContent =
-        "Demo only: Long selected for " + selectedMarket.textContent +
-        ". No real order placed.";
-    });
-
-    document.getElementById("demo-short").addEventListener("click", function() {
-      message.textContent =
-        "Demo only: Short selected for " + selectedMarket.textContent +
-        ". No real order placed.";
-    });
-  </script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
