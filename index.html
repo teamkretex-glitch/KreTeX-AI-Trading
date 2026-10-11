@@ -2,362 +2,381 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <link rel="stylesheet" href="style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090d18">
-  <title>KreTeX AI | Intelligent Trading</title>
+  <meta name="theme-color" content="#0f1115">
+  <title>KreTeX AI Trading</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="./script.js" defer></script>
+
   <style>
     :root {
-      --bg: #090d18;
-      --panel: #101827;
-      --line: #233047;
-      --text: #edf3ff;
-      --muted: #91a0b9;
-      --green: #32d6a0;
-      --red: #ff6d82;
-      --purple: #9c83ff;
-      --cyan: #52d7ee;
+      --brand-green: #2CB72C;
+      --bg-dark: #0f1115;
+      --card-dark: #171a21;
+      --text: #e6e8ec;
+      --up: #2CB72C;
+      --down: #e5484d;
+      --border: #292f3a;
+      --muted: #929baa;
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      background: var(--bg);
+      background: var(--bg-dark);
       color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
+      font: 14px Arial, sans-serif;
     }
-    button, select, input { font: inherit; }
-    button { cursor: pointer; }
 
-    .topbar {
+    button, select { font: inherit; }
+
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 12px;
+      background: #202630;
+      color: var(--text);
+    }
+
+    button.active, .primary {
+      background: var(--brand-green);
+      color: #071007;
+      border-color: var(--brand-green);
+      font-weight: bold;
+    }
+
+    header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      padding: 17px 5%;
-      border-bottom: 1px solid var(--line);
-      background: #0c1220;
+      gap: 12px;
+      padding: 16px 20px;
+      background: #0b0e13;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
-    .brand { font-size: 23px; font-weight: 850; letter-spacing: -.8px; }
-    .brand span { color: var(--cyan); }
-    .status { color: var(--green); font-size: 12px; }
 
-    .hero { padding: 30px 5% 18px; }
-    .eyebrow {
-      color: var(--cyan);
-      font-size: 11px;
-      letter-spacing: 2px;
-      font-weight: 800;
-    }
-    h1 { font-size: clamp(25px, 4vw, 38px); margin: 10px 0; }
-    .subtitle { color: var(--muted); font-size: 14px; }
+    .brand { color: var(--brand-green); font-size: 21px; font-weight: bold; }
+    .muted { color: var(--muted); }
+    .status { color: var(--down); }
+    .status.live { color: var(--up); }
+    .status.error { color: var(--down); }
 
-    .market-strip {
+    main { max-width: 1500px; margin: auto; padding: 20px; }
+
+    .markets {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
-      padding: 0 5% 22px;
+      margin: 18px 0;
     }
+
     .card, .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
+      background: var(--card-dark);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      min-width: 0;
     }
-    .card { padding: 16px; min-width: 0; }
+
     .label { color: var(--muted); font-size: 12px; }
-    .value { font-size: 21px; font-weight: 750; margin-top: 9px; }
-    .up { color: var(--green); }
-    .down { color: var(--red); }
+    .value { font-size: 21px; font-weight: bold; margin: 8px 0; overflow-wrap: anywhere; }
+    .up { color: var(--up); }
+    .down { color: var(--down); }
 
-    .workspace {
+    .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 290px;
+      grid-template-columns: minmax(0, 1fr) 300px;
       gap: 16px;
-      padding: 0 5% 30px;
-    }
-    .panel { padding: 18px; min-width: 0; }
-    .panel-head {
-      display: flex; justify-content: space-between;
-      align-items: center; flex-wrap: wrap; gap: 12px;
-    }
-    h2 { font-size: 17px; margin: 0; }
-    select, input {
-      background: #0b1220; color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 8px; padding: 9px;
-      max-width: 100%;
-    }
-    .chart {
-      position: relative;
-      height: 310px;
-      margin-top: 18px;
-      overflow: hidden;
-      border-radius: 10px;
-      background:
-        linear-gradient(#23304755 1px, transparent 1px),
-        linear-gradient(90deg, #23304755 1px, transparent 1px);
-      background-size: 48px 42px;
-    }
-    .chart svg { width: 100%; height: 100%; display: block; }
-    .chart-note {
-      position: absolute; top: 12px; left: 12px;
-      color: var(--muted); font-size: 11px;
-    }
-    .chart-bottom {
-      display: flex; justify-content: space-between;
-      flex-wrap: wrap; gap: 8px; margin-top: 12px;
-      color: var(--muted); font-size: 12px;
-    }
-    .tag {
-      padding: 6px 9px; border-radius: 7px;
-      background: #1c2940; color: var(--cyan); font-size: 11px;
-    }
-    .order-title { margin: 22px 0 12px; }
-    .field { display: grid; gap: 7px; margin: 13px 0; }
-    .field label { color: var(--muted); font-size: 12px; }
-    .trade-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .trade-buttons button {
-      padding: 12px 6px; border: 0; border-radius: 8px;
-      color: #06130f; background: var(--green); font-weight: 800;
-    }
-    .trade-buttons button:last-child {
-      color: white; background: #b84760;
-    }
-    .notice {
-      margin-top: 12px; padding: 11px;
-      border-radius: 8px; background: #1a2235;
-      color: var(--muted); font-size: 11px; line-height: 1.6;
-    }
-    .section { padding: 0 5% 30px; }
-    .section h2 { margin-bottom: 14px; }
-    .insight {
-      padding: 17px; border-radius: 12px;
-      border: 1px solid #51417e; background: #17152b;
-      color: #dcd4ff; font-size: 13px; line-height: 1.7;
-    }
-    footer {
-      padding: 24px 5%; border-top: 1px solid var(--line);
-      color: var(--muted); font-size: 12px;
+      align-items: start;
     }
 
-    @media (max-width: 800px) {
-      .market-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .workspace { grid-template-columns: 1fr; }
-      .chart { height: 270px; }
+    .panel { margin-bottom: 16px; }
+    .panel h2 { font-size: 16px; margin: 0 0 15px; }
+
+    #market-list { list-style: none; padding: 0; margin: 0; }
+    #market-list li {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
     }
-    @media (max-width: 400px) {
-      .topbar, .hero, .market-strip, .workspace, .section, footer {
-        padding-left: 14px; padding-right: 14px;
-      }
-      .value { font-size: 18px; }
+
+    #market-list li.active { background: #203021; border-left: 3px solid var(--brand-green); }
+    .m-sym { font-weight: bold; }
+    .m-price { text-align: right; }
+    .m-sub, .m-chg { color: var(--muted); font-size: 12px; }
+    .m-chg { text-align: right; }
+    .m-chg.up { color: var(--up); }
+    .m-chg.down { color: var(--down); }
+
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    #tf-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+    #chart { width: 100%; height: 420px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: 8px;
+      background: #10141b;
+      overflow-wrap: anywhere;
+    }
+
+    .stat .val { font-weight: bold; margin-top: 6px; }
+
+    .book-section { margin-top: 18px; }
+    .book-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #242a33;
+    }
+
+    #asks .row, #bids .row {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 5px 3px;
+      overflow: hidden;
+    }
+
+    #asks .bar, #bids .bar {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      opacity: .12;
+      pointer-events: none;
+    }
+
+    #asks .bar { background: var(--down); }
+    #bids .bar { background: var(--up); }
+    #asks .p { color: var(--down); }
+    #bids .p { color: var(--up); }
+
+    .signal-main { font-size: 23px; font-weight: bold; }
+    .notice {
+      border: 1px solid #544a27;
+      background: #242116;
+      color: #e8d69a;
+      padding: 12px;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .order-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .buy { background: var(--brand-green); color: #071007; font-weight: bold; }
+    .sell { background: var(--down); color: white; font-weight: bold; }
+
+    footer { padding: 20px; color: var(--muted); text-align: center; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .markets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 520px) {
+      main { padding: 10px; }
+      header { padding: 14px 12px; }
+      .markets { gap: 8px; }
+      .card, .panel { padding: 12px; }
+      .value { font-size: 17px; }
+      #chart { height: 330px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="brand">KreTeX<span> AI</span></div>
-    <div class="status">● PLATFORM PREVIEW</div>
+  <header>
+    <div>
+      <div class="brand">KreTeX AI</div>
+      <div class="muted">Intelligent Market Terminal</div>
+    </div>
+
+    <div id="status" class="status error">
+      <span id="status-text">Connecting to market...</span>
+    </div>
+
+    <div class="muted">PAPER MODE · LIVE DATA</div>
   </header>
 
-  <section class="hero">
-    <div class="eyebrow">INTELLIGENCE MEETS THE MARKET</div>
-    <h1>Trade with a clearer perspective.</h1>
-    <div class="subtitle">Market analytics, technical charts and risk-aware trading tools.</div>
-  </section>
-
-  <section class="market-strip">
-    <div class="card">
-      <div class="label">BTC / USD</div>
-      <div class="value" id="btcPrice">$67,420.50</div>
-      <div class="label up">Preview value</div>
-    </div>
-    <div class="card">
-      <div class="label">ETH / USD</div>
-      <div class="value">$3,420.80</div>
-      <div class="label up">Preview value</div>
-    </div>
-    
-    <div class="card">
-      <div class="label">SOL / USD</div>
-      <div class="value" id="solPrice">--</div>
-      <div class="label">Live data not connected</div>
-    </div>
-
-    <div class="card">
-      <div class="label">GOLD / XAUUSD</div>
-      <div class="value" id="goldPrice">--</div>
-      <div class="label">Live data not connected</div>
-    </div>
-
-    <div class="card">
-      <div class="label">Market state</div>
-      <div class="value">Analyzing</div>
-      <div class="label">Demo environment</div>
-    </div>
-    <div class="card">
-      <div class="label">Trading mode</div>
-      <div class="value">Paper</div>
-      <div class="label">Real orders disabled</div>
-    </div>
-  </section>
-
-  <main class="workspace">
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Market chart</h2>
-          <div class="label" style="margin-top:7px">BTC / USD · Illustrative chart</div>
-        </div>
-        <select id="timeframe" aria-label="Chart timeframe">
-          <option value="1m">1 minute</option>
-          <option value="5m">5 minutes</option>
-          <option value="15m">15 minutes</option>
-          <option value="30m">30 minutes</option>
-          <option value="1h" selected>1 hour</option>
-          <option value="4h">4 hours</option>
-          <option value="1d">1 day</option>
-        </select>
+  <main>
+    <section class="markets">
+      <div class="card">
+        <div class="label">BTC / USD</div>
+        <div class="value" id="btcPrice">—</div>
+        <div class="label">Delta market data</div>
       </div>
 
-      <div class="chart">
-        <div class="chart-note" id="chartNote">Illustrative candles · 1 hour</div>
-        <svg viewBox="0 0 700 300" preserveAspectRatio="none"
-             role="img" aria-label="Illustrative candlestick chart">
-          <g stroke="#34435a" stroke-width="1">
-            <line x1="0" y1="60" x2="700" y2="60"/>
-            <line x1="0" y1="120" x2="700" y2="120"/>
-            <line x1="0" y1="180" x2="700" y2="180"/>
-            <line x1="0" y1="240" x2="700" y2="240"/>
-          </g>
-          <g id="candles"></g>
-        </svg>
+      <div class="card">
+        <div class="label">ETH / USD</div>
+        <div class="value" id="ethPrice">—</div>
+        <div class="label">Delta market data</div>
       </div>
-      <div class="chart-bottom">
-        <span>Chart preview is illustrative, not live exchange data.</span>
-        <span class="tag" id="selectedFrame">1H</span>
+
+      <div class="card">
+        <div class="label">SOL / USD</div>
+        <div class="value" id="solPrice">—</div>
+        <div class="label">Symbol availability must be verified</div>
+      </div>
+
+      <div class="card">
+        <div class="label">GOLD / XAUTUSD</div>
+        <div class="value" id="goldPrice">—</div>
+        <div class="label">Symbol availability must be verified</div>
       </div>
     </section>
 
-    <aside class="panel">
-      <h2>Order ticket</h2>
-      <div class="label" style="margin-top:7px">BTC / USD · Paper mode only</div>
+    <div class="layout">
+      <section>
+        <div class="panel">
+          <div class="chart-head">
+            <div>
+              <div class="label">Selected market</div>
+              <h2 id="symbol-name">BTCUSD</h2>
+              <div id="last-price" class="value">—</div>
+              <div id="chg" class="val muted">—</div>
+            </div>
 
-      <div class="field">
-        <label for="orderType">Order type</label>
-        <select id="orderType">
-          <option>Market (simulation)</option>
-          <option>Limit (simulation)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="quantity">Quantity (BTC)</label>
-        <input id="quantity" type="number" min="0.0001" step="0.0001"
-               value="0.001">
-      </div>
-      <div class="field">
-        <label for="stopLoss">Stop-loss price (optional)</label>
-        <input id="stopLoss" type="number" min="0" placeholder="Enter price">
-      </div>
-      <div class="field">
-        <label for="takeProfit">Take-profit price (optional)</label>
-        <input id="takeProfit" type="number" min="0" placeholder="Enter price">
-      </div>
+            <div id="tf-buttons">
+              <button data-tf="1m">1m</button>
+              <button data-tf="5m">5m</button>
+              <button data-tf="15m" class="active">15m</button>
+              <button data-tf="1h">1h</button>
+              <button data-tf="4h">4h</button>
+              <button data-tf="1d">1D</button>
+            </div>
+          </div>
 
-      <div class="trade-buttons">
-        <button id="longBtn" type="button">Simulate Long</button>
-        <button id="shortBtn" type="button">Simulate Short</button>
-      </div>
-      <div class="notice" id="orderMessage">
-        Simulation only. No exchange connection or real orders.
-      </div>
-    </aside>
+          <div id="chart"></div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Mark price</div>
+              <div class="val" id="mark">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">24h high</div>
+              <div class="val" id="high">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">24h low</div>
+              <div class="val" id="low">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Turnover</div>
+              <div class="val" id="vol">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Order Book</h2>
+          <div class="label">Sell orders</div>
+          <div id="asks"></div>
+          <div class="book-row">
+            <span class="label">Market spread</span>
+            <strong id="spread">—</strong>
+          </div>
+          <div class="label" style="margin-top:12px">Buy orders</div>
+          <div id="bids"></div>
+        </div>
+
+        <div class="panel">
+          <h2>AI Market Signal</h2>
+          <div id="signal-main" class="signal-main">Analyzing</div>
+          <div id="signal-meta" class="label" style="margin-top:8px">
+            Waiting for candle data
+          </div>
+          <p class="muted">Indicator-based demo insight, not a guaranteed trading signal.</p>
+        </div>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <h2>Markets</h2>
+          <ul id="market-list"></ul>
+        </div>
+
+        <div class="panel">
+          <h2>Paper Trading</h2>
+          <div class="notice">
+            Demo interface only. No real orders will be sent from these buttons.
+          </div>
+
+          <p class="label" style="margin-top:16px">Selected market</p>
+          <div id="selected-market" class="value">BTCUSD</div>
+
+          <label class="label" for="demo-size">Demo quantity</label>
+          <input id="demo-size" type="number" min="0" step="0.001"
+            value="0.001"
+            style="display:block;width:100%;margin:8px 0 14px;padding:10px;background:#10141b;color:#e6e8ec;border:1px solid #292f3a;border-radius:7px">
+
+          <div class="order-actions">
+            <button class="buy" id="demo-long">Long (Demo)</button>
+            <button class="sell" id="demo-short">Short (Demo)</button>
+          </div>
+
+          <div id="orderMessage" class="muted" style="margin-top:12px" aria-live="polite">
+            Demo mode — no order placed.
+          </div>
+        </div>
+      </aside>
+    </div>
   </main>
 
-  <section class="section">
-    <h2>KreTeX AI market insight</h2>
-    <div class="insight" id="insight">
-      AI analyst is not connected yet. This preview does not generate
-      verified market signals. Connect a trusted market-data source before
-      using live analysis.
-    </div>
-  </section>
-
   <footer>
-    KreTeX AI · Independent trading platform preview ·
-    Market values and candles shown here are illustrative.
+    KreTeX AI · Founded by Kamlesh Rajput · Public market data ·
+    Paper trading only · No financial advice
   </footer>
 
   <script>
-    const candleGroup = document.getElementById("candles");
-    const timeframe = document.getElementById("timeframe");
-    const chartNote = document.getElementById("chartNote");
-    const selectedFrame = document.getElementById("selectedFrame");
-    const orderMessage = document.getElementById("orderMessage");
+    // Demo buttons: these do not place real orders.
+    const marketList = document.getElementById("market-list");
+    const selectedMarket = document.getElementById("selected-market");
+    const message = document.getElementById("orderMessage");
 
-    function drawPreviewCandles() {
-      candleGroup.replaceChildren();
-      let price = 150;
-      for (let i = 0; i < 38; i++) {
-        const x = 12 + i * 17.8;
-        const open = price;
-        price += (Math.sin(i * 1.7) * 10) + (Math.cos(i * .63) * 5);
-        const close = price;
-        const high = Math.max(open, close) + 5 + (i % 4);
-        const low = Math.min(open, close) - 5 - (i % 3);
-        const color = close >= open ? "#32d6a0" : "#ff6d82";
-
-        const wick = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        wick.setAttribute("x1", x + 5);
-        wick.setAttribute("x2", x + 5);
-        wick.setAttribute("y1", 300 - high);
-        wick.setAttribute("y2", 300 - low);
-        wick.setAttribute("stroke", color);
-        wick.setAttribute("stroke-width", "1.5");
-        candleGroup.appendChild(wick);
-
-        const body = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        body.setAttribute("x", x);
-        body.setAttribute("y", 300 - Math.max(open, close));
-        body.setAttribute("width", "10");
-        body.setAttribute("height", Math.max(3, Math.abs(close - open)));
-        body.setAttribute("fill", color);
-        candleGroup.appendChild(body);
-      }
+    if (marketList && selectedMarket) {
+      marketList.addEventListener("click", function(event) {
+        const item = event.target.closest("li[data-sym]");
+        if (item) selectedMarket.textContent = item.dataset.sym;
+      });
     }
 
-    timeframe.addEventListener("change", () => {
-      const labels = {
-        "1m": "1 minute", "5m": "5 minutes",
-        "15m": "15 minutes", "30m": "30 minutes",
-        "1h": "1 hour", "4h": "4 hours", "1d": "1 day"
-      };
-      chartNote.textContent = "Illustrative candles · " + labels[timeframe.value];
-      selectedFrame.textContent = timeframe.value.toUpperCase();
-      drawPreviewCandles();
+    document.getElementById("demo-long").addEventListener("click", function() {
+      message.textContent =
+        "Demo only: Long selected for " + selectedMarket.textContent +
+        ". No real order placed.";
     });
 
-    function simulateOrder(direction) {
-      const quantity = Number(document.getElementById("quantity").value);
-      const sl = document.getElementById("stopLoss").value;
-      const tp = document.getElementById("takeProfit").value;
-
-      if (!Number.isFinite(quantity) || quantity <= 0) {
-        orderMessage.textContent = "Enter a valid quantity greater than zero.";
-        return;
-      }
-      orderMessage.textContent =
-        direction + " simulation prepared for " + quantity +
-        " BTC. No order was sent to an exchange." +
-        (sl ? " Stop-loss entered." : "") +
-        (tp ? " Take-profit entered." : "");
-    }
-
-    document.getElementById("longBtn")
-      .addEventListener("click", () => simulateOrder("Long"));
-    document.getElementById("shortBtn")
-      .addEventListener("click", () => simulateOrder("Short"));
-
-    drawPreviewCandles();
+    document.getElementById("demo-short").addEventListener("click", function() {
+      message.textContent =
+        "Demo only: Short selected for " + selectedMarket.textContent +
+        ". No real order placed.";
+    });
   </script>
 </body>
 </html>
