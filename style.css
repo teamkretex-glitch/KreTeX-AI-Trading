@@ -2,18 +2,13 @@
   --brand-green: #2CB72C;
   --bg-dark: #0f1115;
   --card-dark: #171a21;
+  --border: #292e39;
   --text: #e6e8ec;
+  --muted: #8b93a5;
   --up: #2CB72C;
   --down: #e5484d;
-
-  --border: #252b36;
-  --muted: #9aa4b2;
-  --input-bg: #10141b;
-  --hover-green: #239923;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-/* Base */
 * {
   box-sizing: border-box;
 }
@@ -26,19 +21,13 @@ body {
   margin: 0;
   background: var(--bg-dark);
   color: var(--text);
-  font-family: Inter, Arial, sans-serif;
-  line-height: 1.6;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
 }
 
 button,
 input,
-select,
-textarea {
+select {
   font: inherit;
 }
 
@@ -46,189 +35,462 @@ button {
   cursor: pointer;
 }
 
-/* Main panels and cards */
-.card,
-.panel,
-.market-card,
-.market-strip,
-.workspace,
-.chart-container,
-.order-panel {
-  background: var(--card-dark);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--brand-green);
+  outline-offset: 2px;
 }
 
-/* Brand and links */
-.brand,
-.logo,
-.text-green {
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 5%;
+  background: #13161c;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
   color: var(--brand-green);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
-a:hover {
-  color: var(--brand-green);
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
-/* Buttons */
-button,
-.btn {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 16px;
-  background: #202630;
-  color: var(--text);
-  transition: background 0.2s ease, transform 0.2s ease;
+.status-dot {
+  width: 9px;
+  height: 9px;
+  background: #e5a23b;
+  border-radius: 50%;
 }
 
-button:hover,
-.btn:hover {
-  transform: translateY(-1px);
+.container {
+  width: min(1200px, 94%);
+  margin: 0 auto;
+  padding: 22px 0 35px;
 }
 
-.btn-primary,
-.btn-buy,
-.buy-button,
-.long-button {
-  background: var(--brand-green);
-  color: #071007;
-  border-color: var(--brand-green);
+.section-title {
+  margin: 0 0 15px;
+  font-size: 19px;
   font-weight: 700;
 }
 
-.btn-primary:hover,
-.btn-buy:hover,
-.buy-button:hover,
-.long-button:hover {
-  background: var(--hover-green);
+.section-subtitle {
+  margin: -7px 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.btn-sell,
-.btn-danger,
-.sell-button,
-.short-button {
-  background: var(--down);
-  color: #fff;
-  border-color: var(--down);
+/* Market cards */
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-/* Profit and loss */
-.profit,
-.positive,
-.price-up {
+.market-card {
+  min-width: 0;
+  padding: 16px;
+  text-align: left;
+  color: var(--text);
+  background: var(--card-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.market-card:hover {
+  border-color: var(--brand-green);
+  transform: translateY(-2px);
+}
+
+.market-card.active {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 1px rgba(44, 183, 44, 0.15);
+}
+
+.market-name {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.market-price {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: clamp(15px, 2vw, 21px);
+  font-weight: 700;
+}
+
+.market-change {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Chart section */
+
+.panel {
+  min-width: 0;
+  padding: 18px;
+  background: var(--card-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.chart-title {
+  margin: 0 0 9px;
+  font-size: 20px;
+}
+
+.last-price {
+  font-size: 24px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.price-change {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.up {
   color: var(--up);
 }
 
-.loss,
-.negative,
-.price-down {
+.down {
   color: var(--down);
 }
 
-/* Forms */
-input,
-select,
-textarea {
+.market-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+  padding: 15px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.stat-value {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.timeframes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 16px 0;
+}
+
+.tf-btn {
+  padding: 8px 12px;
+  color: var(--muted);
+  background: #20242d;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.tf-btn:hover,
+.tf-btn.active {
+  color: var(--brand-green);
+  background: rgba(44, 183, 44, 0.09);
+  border-color: var(--brand-green);
+}
+
+.chart {
   width: 100%;
-  background: var(--input-bg);
+  height: 390px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #12151b;
+}
+
+/* Buy and sell */
+
+.trade-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.trade-box {
+  padding: 18px;
+  background: var(--card-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.trade-box h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.trade-input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
   color: var(--text);
+  background: #101319;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 11px 12px;
-  outline: none;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--brand-green);
-  box-shadow: 0 0 0 2px rgba(44, 183, 44, 0.15);
+.trade-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-input::placeholder,
-textarea::placeholder {
+.btn {
+  min-height: 42px;
+  padding: 10px 14px;
+  color: white;
+  font-weight: 700;
+  border: 0;
+  border-radius: 8px;
+}
+
+.btn-buy {
+  background: var(--brand-green);
+}
+
+.btn-sell {
+  background: var(--down);
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+}
+
+.order-message {
+  margin-top: 12px;
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
+/* AI market analysis */
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
 }
 
-th,
-td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
+.signal-card {
+  padding: 20px;
+  background: var(--card-dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
-th {
+.signal-label {
   color: var(--muted);
-  font-weight: 500;
+  font-size: 12px;
 }
 
-tr:hover {
-  background: rgba(255, 255, 255, 0.025);
+.signal-main {
+  margin: 12px 0;
+  font-size: 25px;
+  font-weight: 800;
 }
 
-/* Navigation */
-header,
-.topbar,
-nav {
-  background: #0b0e13;
-  border-bottom: 1px solid var(--border);
+.signal-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
 }
 
-nav a.active {
+.signal-bullish {
   color: var(--brand-green);
-  border-bottom: 2px solid var(--brand-green);
 }
 
-/* Cards and small labels */
-.muted,
-.subtitle,
-.secondary-text {
-  color: var(--muted);
-}
-
-.badge-green {
-  background: rgba(44, 183, 44, 0.12);
-  color: var(--brand-green);
-  border-radius: 20px;
-  padding: 4px 10px;
-}
-
-.badge-red {
-  background: rgba(229, 72, 77, 0.12);
+.signal-bearish {
   color: var(--down);
-  border-radius: 20px;
-  padding: 4px 10px;
 }
 
-/* Responsive layout */
-img,
-svg,
-canvas {
-  max-width: 100%;
+.signal-neutral {
+  color: #e5a23b;
 }
 
-@media (max-width: 768px) {
-  .workspace,
-  .dashboard-grid,
-  .market-strip {
+/* Order book */
+
+.orderbook {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.order-column h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.order-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #252a34;
+  font-size: 12px;
+}
+
+.order-row span {
+  overflow-wrap: anywhere;
+}
+
+.order-row.ask {
+  color: var(--down);
+}
+
+.order-row.bid {
+  color: var(--up);
+}
+
+/* Market watchlist */
+
+.market-list {
+  display: grid;
+  gap: 8px;
+}
+
+.market-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  color: var(--text);
+  text-align: left;
+  background: #12151b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.market-list-item:hover,
+.market-list-item.active {
+  border-color: var(--brand-green);
+}
+
+.market-list-item small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error-text {
+  color: var(--down);
+}
+
+footer {
+  padding: 22px 5%;
+  color: var(--muted);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+/* Mobile responsive layout */
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 14px 4%;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .container {
+    width: 94%;
+    padding-top: 17px;
+  }
+
+  .market-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .market-card {
+    padding: 13px;
+  }
+
+  .panel {
+    padding: 13px;
+  }
+
+  .chart {
+    height: 320px;
+  }
+
+  .market-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 17px;
+  }
+
+  .trade-panel,
+  .analysis-grid {
     grid-template-columns: 1fr;
   }
 
-  .card,
-  .panel {
-    border-radius: 10px;
+  .last-price {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 380px) {
+  .chart {
+    height: 280px;
   }
 
-  th,
-  td {
-    padding: 9px 7px;
-    font-size: 13px;
+  .tf-btn {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .signal-main {
+    font-size: 22px;
   }
 }
