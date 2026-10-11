@@ -3,155 +3,220 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f1115">
+  <meta name="theme-color" content="#111318">
   <title>KreTeX AI Trading</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>KreTeX <span>AI</span></h1>
-      <p class="subtitle">Intelligent Market Terminal</p>
+  <div class="app">
+
+    <!-- Header -->
+    <header class="topbar">
+      <div>
+        <h1>KreTeX AI</h1>
+        <p>Professional Trading Terminal</p>
+      </div>
+      <span class="demo-badge">DEMO</span>
+    </header>
+
+    <!-- Trading mode -->
+    <section class="mode-row">
+      <button class="mode-active">Main</button>
+      <button class="mode-button">Isolated</button>
+    </section>
+
+    <!-- Selected market -->
+    <section class="market-header">
+      <div>
+        <button class="symbol-button" id="symbolButton">★ BTCUSD ▾</button>
+        <p>Bitcoin Perpetual</p>
+      </div>
+      <div class="price-area">
+        <strong id="currentPrice">Loading...</strong>
+        <span id="priceChange">Market data</span>
+      </div>
+    </section>
+
+    <!-- Market selector -->
+    <div class="market-picker hidden" id="marketPicker">
+      <button data-symbol="BTCUSD">BTCUSD</button>
+      <button data-symbol="ETHUSD">ETHUSD</button>
+      <button data-symbol="SOLUSD">SOLUSD</button>
+      <button data-symbol="XAUTUSD">GOLD</button>
     </div>
-    <div id="status" class="status">
-      <span class="status-dot"></span>
-      <span id="status-text">Connecting...</span>
-    </div>
-  </header>
 
-  <main class="container">
-    <section class="market-section">
-      <div class="section-heading">
-        <h2>Markets</h2>
-        <span class="muted">Select a market</span>
+    <!-- Chart controls -->
+    <section class="chart-section">
+      <div class="chart-toolbar">
+        <button id="timeframeButton">15m ›</button>
+        <button id="indicatorsButton">Indicators ☰</button>
       </div>
 
-      <div class="market-grid">
-        <button class="market-card active" data-market="BTCUSD">
-          <span>BTC / USD</span>
-          <strong id="btcPrice">—</strong>
-          <small>Bitcoin</small>
-        </button>
+      <div class="timeframe-menu hidden" id="timeframeMenu">
+        <button data-timeframe="1m">1m</button>
+        <button data-timeframe="5m">5m</button>
+        <button data-timeframe="15m">15m</button>
+        <button data-timeframe="30m">30m</button>
+        <button data-timeframe="1h">1h</button>
+        <button data-timeframe="4h">4h</button>
+        <button data-timeframe="1d">1d</button>
+      </div>
 
-        <button class="market-card" data-market="ETHUSD">
-          <span>ETH / USD</span>
-          <strong id="ethPrice">—</strong>
-          <small>Ethereum</small>
-        </button>
+      <div class="indicators-menu hidden" id="indicatorsMenu">
+        <label><input type="checkbox" value="ema9"> EMA 9</label>
+        <label><input type="checkbox" value="ema21"> EMA 21</label>
+        <label><input type="checkbox" value="vwap"> VWAP</label>
+        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+        <label><input type="checkbox" value="rsi"> RSI 14</label>
+        <label><input type="checkbox" value="macd"> MACD</label>
+      </div>
 
-        <button class="market-card" data-market="SOLUSD">
-          <span>SOL / USD</span>
-          <strong id="solPrice">—</strong>
-          <small>Solana</small>
-        </button>
+      <div id="tradingChart" class="trading-chart">
+        <p class="chart-placeholder">Loading chart...</p>
+      </div>
 
-        <button class="market-card" data-market="XAUTUSD">
-          <span>GOLD</span>
-          <strong id="goldPrice">—</strong>
-          <small>Symbol verification pending</small>
-        </button>
+      <div id="indicatorPanels" class="indicator-panels"></div>
+    </section>
+
+    <!-- Funding information -->
+    <section class="funding-row">
+      <div>
+        <span>Funding / Countdown</span>
+        <strong id="fundingValue">--</strong>
+      </div>
+      <div>
+        <span>Market</span>
+        <strong id="marketStatus">Demo mode</strong>
       </div>
     </section>
 
-    <section class="chart-section panel">
-      <div class="chart-heading">
-        <div>
-          <h2 id="symbol-name">BTCUSD</h2>
-          <div class="price-line">
-            <strong id="last-price">—</strong>
-            <span id="chg">—</span>
-          </div>
-        </div>
-        <span class="muted">Delta Exchange India</span>
-      </div>
-
-      <div class="market-stats">
-        <div><span>Mark</span><strong id="mark">—</strong></div>
-        <div><span>High</span><strong id="high">—</strong></div>
-        <div><span>Low</span><strong id="low">—</strong></div>
-        <div><span>Turnover</span><strong id="vol">—</strong></div>
-      </div>
-
-      <div class="timeframe-row" id="tf-buttons">
-        <button data-tf="1m">1m</button>
-        <button data-tf="5m">5m</button>
-        <button data-tf="15m" class="active">15m</button>
-        <button data-tf="30m">30m</button>
-        <button data-tf="1h">1h</button>
-        <button data-tf="4h">4h</button>
-        <button data-tf="1d">1D</button>
-      </div>
-
-      <div id="chart" class="chart"></div>
-      <p class="chart-note">Market data may be delayed or unavailable for unsupported symbols.</p>
+    <!-- Long / Short directly below chart -->
+    <section class="trade-actions">
+      <button id="longButton" class="long-button">Long</button>
+      <button id="shortButton" class="short-button">Short</button>
     </section>
 
-    <section class="trade-section panel">
-      <div class="section-heading">
-        <h2>Paper Trading</h2>
-        <span class="demo-badge">DEMO ONLY</span>
+    <!-- Order entry -->
+    <section class="order-panel" id="orderPanel">
+      <div class="order-heading">
+        <h2>Order Entry</h2>
+        <span id="selectedSide">Long</span>
       </div>
 
-      <label for="demo-size">Demo quantity</label>
-      <input id="demo-size" type="number" min="1" step="1" value="1">
-
-      <div class="trade-buttons">
-        <button id="demo-long" class="buy-button">Buy / Long — Demo</button>
-        <button id="demo-short" class="sell-button">Sell / Short — Demo</button>
+      <div class="form-row">
+        <label for="leverage">Leverage</label>
+        <select id="leverage">
+          <option value="1">1x</option>
+          <option value="2">2x</option>
+          <option value="5">5x</option>
+          <option value="10">10x</option>
+        </select>
       </div>
 
-      <p id="orderMessage" class="order-message" aria-live="polite">
-        Demo mode. No real orders will be placed.
+      <div class="form-row">
+        <label for="orderType">Order Type</label>
+        <select id="orderType">
+          <option value="market">Market</option>
+          <option value="limit">Limit</option>
+        </select>
+      </div>
+
+      <label for="orderAmount">Quantity / Amount</label>
+      <input id="orderAmount" type="number" min="0" step="any"
+             placeholder="Enter demo amount">
+
+      <div class="percentage-row">
+        <button data-percent="25">25%</button>
+        <button data-percent="50">50%</button>
+        <button data-percent="75">75%</button>
+        <button data-percent="100">100%</button>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="reduceOnly">
+        Reduce Only
+      </label>
+
+      <details class="risk-settings">
+        <summary>Take Profit / Stop Loss</summary>
+        <label for="takeProfit">Take Profit price</label>
+        <input id="takeProfit" type="number" placeholder="Optional">
+        <label for="stopLoss">Stop Loss price</label>
+        <input id="stopLoss" type="number" placeholder="Optional">
+      </details>
+
+      <button id="placeDemoOrder" class="place-order-button">
+        Place Demo Order
+      </button>
+      <p class="demo-warning">
+        Demo only. No real exchange orders will be placed.
       </p>
     </section>
 
-    <section class="analysis-section panel">
-      <div class="section-heading">
-        <h2>AI Market Analysis</h2>
-        <span class="muted">EMA 9/21 · RSI 14</span>
+    <!-- Order book -->
+    <section class="content-section" id="orderBookSection">
+      <h2>Order Book</h2>
+      <div class="orderbook-head">
+        <span>Bid / Buy</span>
+        <span>Price</span>
+        <span>Ask / Sell</span>
       </div>
-
-      <div class="signal-row">
-        <strong id="signal-main" class="signal-main">Waiting for data</strong>
-        <span class="demo-badge">INDICATOR SIGNAL</span>
+      <div id="orderBook">
+        <p class="empty-state">Loading public market data...</p>
       </div>
-
-      <p id="signal-meta" class="muted">
-        Analysis will appear after candle data loads.
-      </p>
-      <p class="chart-note">
-        Bullish/Bearish signals are indicators, not guaranteed predictions.
-      </p>
     </section>
 
-    <section class="orderbook-section panel">
-      <div class="section-heading">
-        <h2>Order Book</h2>
-        <span class="muted" id="spread">Spread —</span>
+    <!-- AI analysis -->
+    <section class="content-section" id="analysisSection">
+      <h2>AI Market Analysis</h2>
+      <div class="analysis-card">
+        <strong id="analysisSignal">Waiting for data</strong>
+        <p id="analysisText">
+          EMA and RSI analysis will appear after market candles load.
+        </p>
       </div>
-
-      <div class="book-head">
-        <span>Price</span><span>Size</span>
-      </div>
-      <div id="asks" class="book-rows"></div>
-      <div class="book-divider">Asks / Bids</div>
-      <div id="bids" class="book-rows"></div>
     </section>
 
-    <section class="watchlist-section panel">
-      <div class="section-heading">
-        <h2>Market Watchlist</h2>
+    <!-- Positions and orders -->
+    <section class="positions-section">
+      <div class="tab-row">
+        <button class="position-tab active" data-tab="positions">
+          Position
+        </button>
+        <button class="position-tab" data-tab="orders">
+          Open Orders (<span id="orderCount">0</span>)
+        </button>
       </div>
-      <ul id="market-list" class="market-list"></ul>
+      <div id="positionsContent">
+        <p class="empty-state">No open demo position</p>
+      </div>
     </section>
-  </main>
 
-  <footer>
-    <p>KreTeX AI · Founded by Kamlesh Rajput</p>
-    <p>Market data only · Real trading disabled</p>
-  </footer>
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+      <button data-page="home">
+        <span>⌂</span><small>Home</small>
+      </button>
+      <button data-page="markets">
+        <span>◉</span><small>Markets</small>
+      </button>
+      <button data-page="trade" class="nav-active">
+        <span>⇄</span><small>Trade</small>
+      </button>
+      <button data-page="charts">
+        <span>▥</span><small>Charts</small>
+      </button>
+      <button data-page="portfolio">
+        <span>▣</span><small>Portfolio</small>
+      </button>
+    </nav>
 
-  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+    <footer>
+      KreTeX AI · Founded by Kamlesh Rajput
+    </footer>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
