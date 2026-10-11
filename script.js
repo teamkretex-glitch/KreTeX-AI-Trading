@@ -712,6 +712,5 @@
     setInterval(loadTicker, 15000);
   }
 
-  document.addEventListener("DOMContentLoaded", 
-start);
+  document.addEventListener("DOMContentLoaded", start);
 })();
