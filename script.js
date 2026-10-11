@@ -1,21 +1,29 @@
-// KreTeX AI — Market Dashboard
-// Public market data only. Buy/Sell buttons are demo-only.
-// Never put API secrets in frontend JavaScript.
+/* KreTeX AI — public market data + demo trading
+   Real exchange orders are intentionally disabled.
+*/
 
 (() => {
   "use strict";
 
-  const REST = "https://api.india.delta.exchange";
-  const WS_URL = "wss://public-socket.india.delta.exchange";
+  const API = "https://api.india.delta.exchange";
+  const $ = (id) => document.getElementById(id);
 
-  const MARKETS = {
-    BTCUSD: { name: "Bitcoin", decimals: 1 },
-    ETHUSD: { name: "Ethereum", decimals: 2 },
-    SOLUSD: { name: "Solana", decimals: 3 },
-    XAUTUSD: { name: "Gold", decimals: 2 }
+  const state = {
+    symbol: "BTCUSD",
+    timeframe: "15m",
+    candles: [],
+    chart: null,
+    candleSeries: null,
+    volumeSeries: null,
+    extraSeries: {},
+    demoOrders: [],
+    demoPositions: [],
+    side: "Long",
+    balance: 1000,
+    loading: false
   };
 
-  const TIMEFRAMES = {
+  const intervals = {
     "1m": 60,
     "5m": 300,
     "15m": 900,
@@ -25,454 +33,261 @@
     "1d": 86400
   };
 
-  const state = {
-    symbol: "BTCUSD",
-    timeframe: "15m",
-    tickers: {},
-    candles: [],
-    products: new Set(),
-    chart: null,
-    candleSeries: null,
-    volumeSeries: null,
-    socket: null,
-    reconnectTimer: null,
-    tickerTimer: null,
-    candleTimer: null,
-    bookTimer: null,
-    requestId: 0,
-    busy: false
-  };
-
-  const $ = (id) => document.getElementById(id);
-
-  function number(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function fmt(value, decimals = 2) {
-    const n = number(value);
-    if (n === null) return "—";
-    return n.toLocaleString("en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-  }
-
-  function price(value, symbol = state.symbol) {
-    const n = number(value);
-    if (n === null) return "—";
-
-    const decimals = MARKETS[symbol]?.decimals ?? 2;
-    return "$" + fmt(n, decimals);
-  }
-
   function setText(id, value) {
     const el = $(id);
     if (el) el.textContent = value;
   }
 
-  function setStatus(message, connected = false) {
-    setText("status-text", message);
-
-    const dot = document.querySelector(".status-dot");
-    if (dot) {
-      dot.style.background = connected ? "#2CB72C" : "#e5a23b";
-    }
+  function show(el) {
+    if (el) el.classList.remove("hidden");
   }
 
-  async function getJSON(path) {
-    const response = await fetch(REST + path, {
-      headers: { Accept: "application/json" },
-      cache: "no-store"
-    });
+  function hide(el) {
+    if (el) el.classList.add("hidden");
+  }
 
+  async function getJSON(url) {
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error("API HTTP " + response.status);
+      throw new Error(`Market data request failed (${response.status})`);
     }
 
-    const result = await response.json();
+    const data = await response.json();
 
-    if (result.success === false) {
-      throw new Error(result.error || "Market API error");
+    if (data.success === false) {
+      throw new Error(data.error || "Market data unavailable");
     }
 
-    return result;
+    return data;
   }
 
-  function tickerPrice(ticker) {
-    if (!ticker) return null;
+  function formatPrice(value) {
+    if (!Number.isFinite(value)) return "—";
 
-    return number(
-      ticker.close ??
-      ticker.last_price ??
-      ticker.mark_price ??
-      ticker.price
-    );
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
+    }).format(value);
   }
 
-  function tickerChange(ticker) {
-    if (!ticker) return null;
-
-    const direct = number(ticker.change_percentage);
-    if (direct !== null) return direct;
-
-    const close = number(ticker.close);
-    const open = number(ticker.open);
-
-    if (close !== null && open !== null && open !== 0) {
-      return ((close - open) / open) * 100;
-    }
-
-    return null;
+  function resolutionFor(timeframe) {
+    return timeframe;
   }
 
-  // ---------- Chart ----------
+  function renderChartPlaceholder(message) {
+    const el = $("tradingChart");
+    if (!el) return;
+
+    el.innerHTML = "";
+    const p = document.createElement("p");
+    p.className = "chart-placeholder";
+    p.textContent = message;
+    el.appendChild(p);
+  }
 
   function initChart() {
-    const container = $("chart");
+    const el = $("tradingChart");
 
-    if (!container || !window.LightweightCharts) {
-      setStatus("Chart library unavailable");
+    if (!el || !window.LightweightCharts) {
+      renderChartPlaceholder("Chart library could not load.");
       return;
     }
 
-    state.chart = LightweightCharts.createChart(container, {
-      width: container.clientWidth,
-      height: container.clientHeight,
+    el.innerHTML = "";
+
+    state.chart = LightweightCharts.createChart(el, {
+      width: el.clientWidth,
+      height: el.clientHeight,
       layout: {
-        background: { color: "#12151b" },
-        textColor: "#a8b0bf"
+        background: { color: "#0c1016" },
+        textColor: "#a6adbd"
       },
       grid: {
-        vertLines: { color: "#222731" },
-        horzLines: { color: "#222731" }
+        vertLines: { color: "#222b36" },
+        horzLines: { color: "#222b36" }
       },
       rightPriceScale: {
-        borderColor: "#343a46"
+        borderColor: "#343a45"
       },
       timeScale: {
-        borderColor: "#343a46",
+        borderColor: "#343a45",
         timeVisible: true,
         secondsVisible: false
       },
       crosshair: {
         mode: LightweightCharts.CrosshairMode.Normal
-      },
-      localization: {
-        priceFormatter: (value) => price(value)
       }
     });
 
     state.candleSeries = state.chart.addCandlestickSeries({
-      upColor: "#2CB72C",
-      downColor: "#e5484d",
-      borderUpColor: "#2CB72C",
-      borderDownColor: "#e5484d",
-      wickUpColor: "#2CB72C",
-      wickDownColor: "#e5484d",
-      priceLineVisible: true
+      upColor: "#43d9a3",
+      downColor: "#ff7185",
+      borderUpColor: "#43d9a3",
+      borderDownColor: "#ff7185",
+      wickUpColor: "#43d9a3",
+      wickDownColor: "#ff7185"
     });
 
     state.volumeSeries = state.chart.addHistogramSeries({
       priceFormat: { type: "volume" },
-      priceScaleId: "",
-      lastValueVisible: false,
-      priceLineVisible: false
+      priceScaleId: ""
     });
 
     state.volumeSeries.priceScale().applyOptions({
-      scaleMargins: {
-        top: 0.82,
-        bottom: 0
-      }
+      scaleMargins: { top: 0.82, bottom: 0 }
     });
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (!state.chart || !container.isConnected) return;
-
-      state.chart.applyOptions({
-        width: container.clientWidth,
-        height: container.clientHeight
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(() => {
+        if (state.chart && el.clientWidth) {
+          state.chart.applyOptions({
+            width: el.clientWidth,
+            height: el.clientHeight
+          });
+        }
       });
-    });
-
-    resizeObserver.observe(container);
-  }
-
-  function normalizeCandles(rows) {
-    if (!Array.isArray(rows)) return [];
-
-    return rows.map((c) => {
-      const seconds = Number(c.time ?? c.t ?? c.timestamp);
-
-      return {
-        time: seconds > 1e12
-          ? Math.floor(seconds / 1000)
-          : Math.floor(seconds),
-        open: Number(c.open ?? c.o),
-        high: Number(c.high ?? c.h),
-        low: Number(c.low ?? c.l),
-        close: Number(c.close ?? c.c),
-        volume: Number(c.volume ?? c.v ?? 0)
-      };
-    }).filter((c) =>
-      Number.isFinite(c.time) &&
-      Number.isFinite(c.open) &&
-      Number.isFinite(c.high) &&
-      Number.isFinite(c.low) &&
-      Number.isFinite(c.close) &&
-      c.time > 0
-    ).sort((a, b) => a.time - b.time)
-      .filter((c, i, arr) =>
-        i === 0 || c.time !== arr[i - 1].time
-      );
+      observer.observe(el);
+    }
   }
 
   async function loadCandles() {
-    if (!state.candleSeries) return;
-
-    const requestId = ++state.requestId;
-    const now = Math.floor(Date.now() / 1000);
-    const start = now - TIMEFRAMES[state.timeframe] * 200;
+    if (state.loading) return;
+    state.loading = true;
 
     try {
-      const result = await getJSON(
-        "/v2/history/candles" +
-        "?resolution=" + encodeURIComponent(state.timeframe) +
-        "&symbol=" + encodeURIComponent(state.symbol) +
-        "&start=" + start +
-        "&end=" + now
-      );
+      renderChartPlaceholder("Loading market candles...");
 
-      if (requestId !== state.requestId) return;
+      const now = Math.floor(Date.now() / 1000);
+      const seconds = intervals[state.timeframe] || 900;
+      const start = now - seconds * 200;
 
-      const rows = normalizeCandles(result.result);
+      const url =
+        `${API}/v2/history/candles` +
+        `?resolution=${encodeURIComponent(resolutionFor(state.timeframe))}` +
+        `&symbol=${encodeURIComponent(state.symbol)}` +
+        `&start=${start}&end=${now}`;
 
-      if (!rows.length) {
-        setStatus("No candles returned for " + state.symbol);
-        return;
+      const response = await getJSON(url);
+      const rows = response.result;
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        throw new Error("No candle data returned for this market.");
       }
 
-      state.candles = rows;
+      const candles = rows.map((c) => ({
+        time: Number(c.time),
+        open: Number(c.open),
+        high: Number(c.high),
+        low: Number(c.low),
+        close: Number(c.close),
+        volume: Number(c.volume || 0)
+      })).filter((c) =>
+        Number.isFinite(c.time) &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.high) &&
+        Number.isFinite(c.low) &&
+        Number.isFinite(c.close)
+      ).sort((a, b) => a.time - b.time);
 
-      state.candleSeries.setData(rows.map((c) => ({
-        time: c.time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close
-      })));
+      const unique = [];
+      const seen = new Set();
 
-      state.volumeSeries.setData(rows.map((c) => ({
-        time: c.time,
-        value: c.volume,
-        color: c.close >= c.open
-          ? "rgba(44,183,44,0.35)"
-          : "rgba(229,72,77,0.35)"
-      })));
+      for (const candle of candles) {
+        if (!seen.has(candle.time)) {
+          seen.add(candle.time);
+          unique.push(candle);
+        }
+      }
+
+      state.candles = unique;
+
+      if (!state.chart) initChart();
+
+      if (!state.candleSeries) {
+        throw new Error("Chart could not initialize.");
+      }
+
+      state.candleSeries.setData(
+        unique.map(({ time, open, high, low, close }) => ({
+          time, open, high, low, close
+        }))
+      );
+
+      state.volumeSeries.setData(
+        unique.map((c) => ({
+          time: c.time,
+          value: c.volume,
+          color: c.close >= c.open
+            ? "rgba(67,217,163,0.45)"
+            : "rgba(255,113,133,0.45)"
+        }))
+      );
 
       state.chart.timeScale().fitContent();
 
-      updateAnalysis();
-      updateCurrentCandle(rows[rows.length - 1]);
+      const last = unique[unique.length - 1];
+      setText("currentPrice", `$${formatPrice(last.close)}`);
+      setText("marketStatus", "Public data");
+      calculateIndicators();
+      renderAnalysis();
 
-      setStatus("Candles loaded", true);
     } catch (error) {
-      console.error("Candle error:", error);
-      setStatus("Candle data unavailable");
+      console.error(error);
+      renderChartPlaceholder(error.message);
+      setText("currentPrice", "—");
+      setText("marketStatus", "Data unavailable");
+      setText("analysisSignal", "Waiting for market data");
+      setText("analysisText", error.message);
+    } finally {
+      state.loading = false;
     }
   }
 
-  function updateCurrentCandle(candle) {
-    if (!candle) return;
-
-    const ticker = state.tickers[state.symbol];
-    const livePrice = tickerPrice(ticker);
-
-    if (livePrice === null) return;
-
-    const last = {
-      ...candle,
-      close: livePrice,
-      high: Math.max(candle.high, livePrice),
-      low: Math.min(candle.low, livePrice)
-    };
-
-    state.candleSeries.update({
-      time: last.time,
-      open: last.open,
-      high: last.high,
-      low: last.low,
-      close: last.close
-    });
-  }
-
-  // ---------- Tickers and market cards ----------
-
-  async function loadTicker(symbol) {
+  async function loadTicker() {
     try {
-      const result = await getJSON(
-        "/v2/tickers/" + encodeURIComponent(symbol)
+      const response = await getJSON(
+        `${API}/v2/tickers/${encodeURIComponent(state.symbol)}`
       );
 
-      const ticker = result.result;
+      const ticker = response.result;
+      if (!ticker) throw new Error("Ticker not found.");
 
-      if (ticker) {
-        state.tickers[symbol] = ticker;
-        updateMarketCard(symbol);
+      const price = Number(
+        ticker.close ?? ticker.mark_price ?? ticker.last_price
+      );
+
+      if (Number.isFinite(price)) {
+        setText("currentPrice", `$${formatPrice(price)}`);
       }
 
-      return ticker;
+      const change = Number(ticker.change_percentage);
+      setText(
+        "priceChange",
+        Number.isFinite(change)
+          ? `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`
+          : "Market price"
+      );
+
     } catch (error) {
-      console.warn("Ticker unavailable:", symbol, error.message);
-      return null;
+      console.warn("Ticker unavailable:", error.message);
     }
   }
-
-  async function loadAllTickers() {
-    await Promise.all(
-      Object.keys(MARKETS).map(loadTicker)
-    );
-
-    renderMarketList();
-    updateSelectedMarket();
-    updateCurrentCandle(
-      state.candles[state.candles.length - 1]
-    );
-  }
-
-  function updateMarketCard(symbol) {
-    const card = document.querySelector(
-      '.market-card[data-market="' + symbol + '"]'
-    );
-
-    if (!card) return;
-
-    const ticker = state.tickers[symbol];
-    const p = tickerPrice(ticker);
-    const change = tickerChange(ticker);
-
-    const priceEl = card.querySelector(".market-price");
-    const changeEl = card.querySelector(".market-change");
-
-    if (priceEl) {
-      priceEl.textContent = p === null ? "—" : price(p, symbol);
-    }
-
-    if (changeEl) {
-      changeEl.textContent = change === null
-        ? "Change unavailable"
-        : (change > 0 ? "+" : "") + fmt(change, 2) + "%";
-
-      changeEl.classList.toggle("up", change !== null && change > 0);
-      changeEl.classList.toggle("down", change !== null && change < 0);
-    }
-
-    card.classList.toggle("active", symbol === state.symbol);
-  }
-
-  function updateSelectedMarket() {
-    const symbol = state.symbol;
-    const ticker = state.tickers[symbol];
-    const p = tickerPrice(ticker);
-
-    setText("symbol-name", symbol);
-    setText("last-price", p === null ? "—" : price(p));
-
-    const change = tickerChange(ticker);
-    const changeEl = $("chg");
-
-    if (changeEl) {
-      changeEl.textContent = change === null
-        ? "—"
-        : (change > 0 ? "+" : "") + fmt(change, 2) + "%";
-
-      changeEl.classList.toggle("up", change !== null && change > 0);
-      changeEl.classList.toggle("down", change !== null && change < 0);
-    }
-
-    setText("mark", price(ticker?.mark_price));
-    setText("high", price(ticker?.high));
-    setText("low", price(ticker?.low));
-    setText("vol", fmt(ticker?.volume, 2));
-
-    document.querySelectorAll(".market-card[data-market]")
-      .forEach((card) => {
-        card.classList.toggle(
-          "active",
-          card.dataset.market === symbol
-        );
-      });
-
-    document.querySelectorAll(".market-list-item")
-      .forEach((item) => {
-        item.classList.toggle(
-          "active",
-          item.dataset.market === symbol
-        );
-      });
-  }
-
-  function renderMarketList() {
-    const container = $("market-list");
-    if (!container) return;
-
-    container.replaceChildren();
-
-    Object.keys(MARKETS).forEach((symbol) => {
-      const ticker = state.tickers[symbol];
-      const p = tickerPrice(ticker);
-      const change = tickerChange(ticker);
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "market-list-item";
-      button.dataset.market = symbol;
-
-      const left = document.createElement("span");
-      const name = document.createElement("strong");
-      name.textContent = symbol;
-
-      const description = document.createElement("small");
-      description.textContent = MARKETS[symbol].name;
-
-      left.append(name, description);
-
-      const right = document.createElement("span");
-      right.textContent = p === null ? "—" : price(p, symbol);
-
-      if (change !== null) {
-        const small = document.createElement("small");
-        small.textContent =
-          (change > 0 ? "+" : "") + fmt(change, 2) + "%";
-        small.classList.add(change >= 0 ? "up" : "down");
-        right.appendChild(small);
-      }
-
-      button.append(left, right);
-      button.addEventListener("click", () => selectMarket(symbol));
-
-      container.appendChild(button);
-    });
-
-    updateSelectedMarket();
-  }
-
-  // ---------- EMA and RSI ----------
 
   function ema(values, period) {
-    if (values.length < period) return null;
-
+    const result = [];
     const multiplier = 2 / (period + 1);
-    let result = values
-      .slice(0, period)
-      .reduce((sum, value) => sum + value, 0) / period;
+    let previous = null;
 
-    for (let i = period; i < values.length; i++) {
-      result = values[i] * multiplier +
-        result * (1 - multiplier);
-    }
+    values.forEach((value, index) => {
+      previous = previous === null
+        ? value
+        : value * multiplier + previous * (1 - multiplier);
+
+      result.push({
+        time: state.candles[index].time,
+        value: previous
+      });
+    });
 
     return result;
   }
@@ -485,336 +300,418 @@
 
     for (let i = 1; i <= period; i++) {
       const difference = values[i] - values[i - 1];
-
-      if (difference > 0) gains += difference;
-      else losses -= difference;
+      gains += Math.max(0, difference);
+      losses += Math.max(0, -difference);
     }
 
-    let avgGain = gains / period;
-    let avgLoss = losses / period;
+    let averageGain = gains / period;
+    let averageLoss = losses / period;
+    let latest = null;
 
     for (let i = period + 1; i < values.length; i++) {
       const difference = values[i] - values[i - 1];
 
-      avgGain =
-        (avgGain * (period - 1) + Math.max(difference, 0)) /
-        period;
+      averageGain =
+        (averageGain * (period - 1) + Math.max(0, difference)) / period;
 
-      avgLoss =
-        (avgLoss * (period - 1) + Math.max(-difference, 0)) /
-        period;
+      averageLoss =
+        (averageLoss * (period - 1) + Math.max(0, -difference)) / period;
+
+      latest = averageLoss === 0
+        ? 100
+        : 100 - 100 / (1 + averageGain / averageLoss);
     }
 
-    if (avgLoss === 0) return 100;
-
-    const rs = avgGain / avgLoss;
-    return 100 - (100 / (1 + rs));
+    return latest;
   }
 
-  function updateAnalysis() {
+  function calculateIndicators() {
+    if (!state.chart || !state.candleSeries) return;
+
+    const closes = state.candles.map((c) => c.close);
+    const selected = Array.from(
+      document.querySelectorAll("#indicatorsMenu input:checked")
+    ).map((input) => input.value);
+
+    Object.values(state.extraSeries).forEach((series) => {
+      try {
+        state.chart.removeSeries(series);
+      } catch (_) {}
+    });
+
+    state.extraSeries = {};
+
+    function addLine(key, values, color) {
+      const line = state.chart.addLineSeries({
+        color,
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: true
+      });
+
+      line.setData(values.filter((v) =>
+        Number.isFinite(v.value) && Number.isFinite(v.time)
+      ));
+
+      state.extraSeries[key] = line;
+    }
+
+    if (selected.includes("ema9")) {
+      addLine("ema9", ema(closes, 9), "#43d9a3");
+    }
+
+    if (selected.includes("ema21")) {
+      addLine("ema21", ema(closes, 21), "#f3c65d");
+    }
+
+    if (selected.includes("vwap")) {
+      let totalPV = 0;
+      let totalVolume = 0;
+
+      const values = state.candles.map((c) => {
+        const typical = (c.high + c.low + c.close) / 3;
+        const volume = c.volume || 0;
+        totalPV += typical * volume;
+        totalVolume += volume;
+
+        return {
+          time: c.time,
+          value: totalVolume > 0 ? totalPV / totalVolume : c.close
+        };
+      });
+
+      addLine("vwap", values, "#7ca8ff");
+    }
+
+    if (selected.includes("bb") && closes.length >= 20) {
+      const upper = [];
+      const lower = [];
+
+      for (let i = 19; i < closes.length; i++) {
+        const slice = closes.slice(i - 19, i + 1);
+        const mean = slice.reduce((a, b) => a + b, 0) / 20;
+        const variance = slice.reduce(
+          (sum, value) => sum + Math.pow(value - mean, 2), 0
+        ) / 20;
+
+        const deviation = Math.sqrt(variance);
+
+        upper.push({
+          time: state.candles[i].time,
+          value: mean + 2 * deviation
+        });
+
+        lower.push({
+          time: state.candles[i].time,
+          value: mean - 2 * deviation
+        });
+      }
+
+      addLine("bbUpper", upper, "#ba8cff");
+      addLine("bbLower", lower, "#ba8cff");
+    }
+
+    const panel = $("indicatorPanels");
+    if (!panel) return;
+
+    panel.innerHTML = "";
+
+    if (selected.includes("rsi")) {
+      const rsiPanel = document.createElement("div");
+      rsiPanel.className = "indicator-panel";
+      rsiPanel.textContent = "RSI 14: " +
+        (rsi(closes) === null ? "Need more candles" : rsi(closes).toFixed(2));
+      panel.appendChild(rsiPanel);
+    }
+
+    if (selected.includes("macd")) {
+      const macdPanel = document.createElement("div");
+      macdPanel.className = "indicator-panel";
+
+      const fast = ema(closes, 12);
+      const slow = ema(closes, 26);
+      const difference = fast.length - slow.length;
+      const macdValue = difference >= 0
+        ? fast[fast.length - 1].value - slow[slow.length - 1].value
+        : null;
+
+      macdPanel.textContent = "MACD: " +
+        (Number.isFinite(macdValue) ? macdValue.toFixed(4) : "Need more candles");
+
+      panel.appendChild(macdPanel);
+    }
+  }
+
+  function renderAnalysis() {
     const closes = state.candles.map((c) => c.close);
 
-    const main = $("signal-main");
-    const meta = $("signal-meta");
-
-    if (!main || !meta) return;
-
     if (closes.length < 30) {
-      main.textContent = "Waiting for data";
-      main.className = "signal-main signal-neutral";
-      meta.textContent = "More candles are needed for EMA and RSI.";
+      setText("analysisSignal", "Not enough data");
+      setText("analysisText", "More candles are needed for EMA analysis.");
       return;
     }
 
-    const fast = ema(closes, 9);
-    const slow = ema(closes, 21);
-    const currentRsi = rsi(closes, 14);
+    const fast = ema(closes, 9).at(-1).value;
+    const slow = ema(closes, 21).at(-1).value;
+    const momentum = rsi(closes);
 
     let signal = "Neutral";
-    let signalClass = "signal-neutral";
+    let explanation = "Indicators are mixed. Wait for confirmation.";
 
-    if (fast !== null && slow !== null && currentRsi !== null) {
-      if (fast > slow && currentRsi >= 50 && currentRsi < 70) {
-        signal = "Bullish";
-        signalClass = "signal-bullish";
-      } else if (
-        fast < slow &&
-        currentRsi < 50 &&
-        currentRsi > 30
-      ) {
-        signal = "Bearish";
-        signalClass = "signal-bearish";
-      }
+    if (fast > slow && momentum !== null && momentum >= 50 && momentum < 70) {
+      signal = "Bullish";
+      explanation = "EMA 9 is above EMA 21 and RSI supports upward momentum.";
+    } else if (
+      fast < slow &&
+      momentum !== null &&
+      momentum <= 50 &&
+      momentum > 30
+    ) {
+      signal = "Bearish";
+      explanation = "EMA 9 is below EMA 21 and RSI supports downward momentum.";
     }
 
-    main.textContent = signal;
-    main.className = "signal-main " + signalClass;
-
-    meta.textContent =
-      "EMA 9: " + fmt(fast, 2) +
-      " | EMA 21: " + fmt(slow, 2) +
-      " | RSI 14: " + fmt(currentRsi, 2) +
-      " | Timeframe: " + state.timeframe +
-      ". Indicator-based information only; not a guarantee.";
+    setText("analysisSignal", signal);
+    setText("analysisText", explanation);
   }
 
-  // ---------- Order book ----------
+  function setSide(side) {
+    state.side = side;
+    setText("selectedSide", side);
 
-  async function loadOrderBook() {
-    try {
-      const result = await getJSON(
-        "/v2/l2orderbook/" +
-        encodeURIComponent(state.symbol) +
-        "?depth=12"
-      );
+    const longButton = $("longButton");
+    const shortButton = $("shortButton");
 
-      const book = result.result || {};
-      renderBookSide("asks", book.asks || [], "ask");
-      renderBookSide("bids", book.bids || [], "bid");
+    if (longButton) longButton.setAttribute("aria-pressed", String(side === "Long"));
+    if (shortButton) shortButton.setAttribute("aria-pressed", String(side === "Short"));
 
-      const ask = Number(book.asks?.[0]?.[0]);
-      const bid = Number(book.bids?.[0]?.[0]);
-
-      setText(
-        "spread",
-        Number.isFinite(ask) && Number.isFinite(bid)
-          ? fmt(ask - bid, MARKETS[state.symbol]?.decimals ?? 2)
-          : "—"
-      );
-    } catch (error) {
-      console.warn("Order book unavailable:", error.message);
-      setText("spread", "—");
-      renderBookSide("asks", [], "ask");
-      renderBookSide("bids", [], "bid");
+    const panel = $("orderPanel");
+    if (panel) {
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
 
-  function renderBookSide(id, rows, className) {
-    const container = $(id);
-    if (!container) return;
+  function renderDemoOrders() {
+    const count = $("orderCount");
+    if (count) count.textContent = String(state.demoOrders.length);
 
-    container.replaceChildren();
+    const positions = $("positionsContent");
+    if (!positions) return;
 
-    rows.slice(0, 12).forEach((row) => {
-      const line = document.createElement("div");
-      line.className = "order-row " + className;
+    positions.innerHTML = "";
 
-      const p = document.createElement("span");
-      p.textContent = fmt(row[0], MARKETS[state.symbol]?.decimals ?? 2);
-
-      const amount = document.createElement("span");
-      amount.textContent = fmt(row[1], 4);
-
-      line.append(p, amount);
-      container.appendChild(line);
-    });
-
-    if (!rows.length) {
-      const empty = document.createElement("div");
-      empty.className = "muted";
-      empty.textContent = "Order book unavailable";
-      container.appendChild(empty);
-    }
-  }
-
-  // ---------- Market selection ----------
-
-  async function selectMarket(symbol) {
-    if (!MARKETS[symbol] || state.symbol === symbol) return;
-
-    state.symbol = symbol;
-
-    updateSelectedMarket();
-    setStatus("Loading " + symbol + "…");
-
-    await Promise.all([
-      loadTicker(symbol),
-      loadCandles(),
-      loadOrderBook()
-    ]);
-
-    updateSelectedMarket();
-    updateAnalysis();
-  }
-
-  function selectTimeframe(timeframe) {
-    if (!TIMEFRAMES[timeframe] || state.timeframe === timeframe) {
+    if (state.demoPositions.length === 0) {
+      const p = document.createElement("p");
+      p.className = "empty-state";
+      p.textContent = "No open demo position";
+      positions.appendChild(p);
       return;
     }
 
-    state.timeframe = timeframe;
+    state.demoPositions.forEach((position) => {
+      const row = document.createElement("div");
+      row.className = "analysis-card";
 
-    document.querySelectorAll("[data-tf]").forEach((button) => {
-      button.classList.toggle(
-        "active",
-        button.dataset.tf === timeframe
-      );
+      const title = document.createElement("strong");
+      title.textContent = `${position.side} ${position.symbol}`;
+
+      const detail = document.createElement("p");
+      detail.textContent =
+        `Amount: ${position.amount} · Entry: ${position.price}`;
+
+      row.append(title, detail);
+      positions.appendChild(row);
     });
-
-    loadCandles();
   }
 
-  function wireControls() {
-    document.querySelectorAll(".market-card[data-market]")
-      .forEach((card) => {
-        card.addEventListener("click", () => {
-          selectMarket(card.dataset.market);
-        });
-      });
+  function placeDemoOrder() {
+    const amount = Number($("orderAmount")?.value);
+    const priceText = $("currentPrice")?.textContent || "";
+    const price = Number(priceText.replace(/[$,]/g, ""));
 
-    document.querySelectorAll("[data-tf]").forEach((button) => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Please enter a valid demo amount.");
+      return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+      alert("Market price is unavailable. Please wait for data.");
+      return;
+    }
+
+    const order = {
+      id: Date.now(),
+      symbol: state.symbol,
+      side: state.side,
+      amount,
+      price,
+      leverage: Number($("leverage")?.value || 1),
+      type: $("orderType")?.value || "market",
+      createdAt: new Date().toISOString()
+    };
+
+    state.demoOrders.push(order);
+    state.demoPositions.push(order);
+
+    renderDemoOrders();
+
+    alert(
+      `DEMO ORDER CREATED\n${order.side} ${order.symbol}\n` +
+      `Amount: ${order.amount}\nPrice: ${order.price}\n\n` +
+      "No real order was sent to the exchange."
+    );
+  }
+
+  function closeMenus(except) {
+    [
+      $("marketPicker"),
+      $("timeframeMenu"),
+      $("indicatorsMenu")
+    ].forEach((menu) => {
+      if (menu && menu !== except) hide(menu);
+    });
+  }
+
+  function setupControls() {
+    $("symbolButton")?.addEventListener("click", () => {
+      const menu = $("marketPicker");
+      if (!menu) return;
+
+      closeMenus(menu);
+      menu.classList.toggle("hidden");
+    });
+
+    $("marketPicker")?.querySelectorAll("[data-symbol]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        state.symbol = button.dataset.symbol;
+        setText("symbolButton", `★ ${state.symbol} ▾`);
+        hide($("marketPicker"));
+        await loadCandles();
+        await loadTicker();
+      });
+    });
+
+    $("timeframeButton")?.addEventListener("click", () => {
+      const menu = $("timeframeMenu");
+      if (!menu) return;
+
+      closeMenus(menu);
+      menu.classList.toggle("hidden");
+    });
+
+    $("timeframeMenu")?.querySelectorAll("[data-timeframe]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        state.timeframe = button.dataset.timeframe;
+        setText("timeframeButton", `${state.timeframe} ›`);
+        hide($("timeframeMenu"));
+        await loadCandles();
+      });
+    });
+
+    $("indicatorsButton")?.addEventListener("click", () => {
+      const menu = $("indicatorsMenu");
+      if (!menu) return;
+
+      closeMenus(menu);
+      menu.classList.toggle("hidden");
+    });
+
+    $("indicatorsMenu")?.querySelectorAll("input[type=checkbox]").forEach((input) => {
+      input.addEventListener("change", calculateIndicators);
+    });
+
+    $("longButton")?.addEventListener("click", () => setSide("Long"));
+    $("shortButton")?.addEventListener("click", () => setSide("Short"));
+
+    $("placeDemoOrder")?.addEventListener("click", placeDemoOrder);
+
+    $("orderType")?.addEventListener("change", () => {
+      const limit = $("orderType").value === "limit";
+      if (limit) {
+        alert("Limit price entry will be added in a later step. Demo only.");
+      }
+    });
+
+    document.querySelectorAll(".position-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        selectTimeframe(button.dataset.tf);
+        document.querySelectorAll(".position-tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+
+        button.classList.add("active");
+
+        if (button.dataset.tab === "orders") {
+          const content = $("positionsContent");
+          if (!content) return;
+
+          content.innerHTML = "";
+
+          if (state.demoOrders.length === 0) {
+            const p = document.createElement("p");
+            p.className = "empty-state";
+            p.textContent = "No open demo orders";
+            content.appendChild(p);
+          } else {
+            state.demoOrders.forEach((order) => {
+              const row = document.createElement("p");
+              row.className = "empty-state";
+              row.textContent =
+                `${order.side} ${order.symbol} · ${order.amount} · ${order.price}`;
+              content.appendChild(row);
+            });
+          }
+        } else {
+          renderDemoOrders();
+        }
       });
     });
 
-    const longButton = $("demo-long");
-    const shortButton = $("demo-short");
-    const amountInput = $("demo-size");
+    document.querySelectorAll(".bottom-nav [data-page]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const page = button.dataset.page;
 
-    function demoOrder(direction) {
-      const amount = number(amountInput?.value);
+        document.querySelectorAll(".bottom-nav button").forEach((item) => {
+          item.classList.remove("nav-active");
+        });
+        button.classList.add("nav-active");
 
-      if (amount === null || amount <= 0) {
-        setText("orderMessage", "Enter a valid demo amount.");
-        return;
-      }
-
-      const ticker = state.tickers[state.symbol];
-      const p = tickerPrice(ticker);
-
-      if (p === null) {
-        setText("orderMessage", "Market price unavailable. Try again later.");
-        return;
-      }
-
-      setText(
-        "orderMessage",
-        "DEMO ONLY: " + direction + " " + state.symbol +
-        " | Amount: " + fmt(amount, 2) +
-        " | Reference price: " + price(p) +
-        ". No real order was placed."
-      );
-    }
-
-    if (longButton) {
-      longButton.addEventListener("click", () => demoOrder("BUY"));
-    }
-
-    if (shortButton) {
-      shortButton.addEventListener("click", () => demoOrder("SELL"));
-    }
-  }
-
-  // ---------- Public WebSocket ----------
-
-  function connectWebSocket() {
-    if (state.socket) {
-      try {
-        state.socket.close();
-      } catch (_) {}
-    }
-
-    try {
-      const socket = new WebSocket(WS_URL);
-      state.socket = socket;
-
-      socket.addEventListener("open", () => {
-        setStatus("Live connection active", true);
-
-        socket.send(JSON.stringify({
-          type: "subscribe",
-          payload: {
-            channels: [{
-              name: "ticker",
-              symbols: Object.keys(MARKETS)
-            }]
-          }
-        }));
-      });
-
-      socket.addEventListener("message", (event) => {
-        let message;
-
-        try {
-          message = JSON.parse(event.data);
-        } catch (_) {
-          return;
-        }
-
-        const data = message.data || message;
-        const symbol = data.symbol || data.product_symbol;
-
-        if (!symbol || !MARKETS[symbol]) return;
-
-        state.tickers[symbol] = {
-          ...(state.tickers[symbol] || {}),
-          ...data
+        const targets = {
+          home: ".topbar",
+          markets: ".market-header",
+          trade: "#orderPanel",
+          charts: ".chart-section",
+          portfolio: ".positions-section"
         };
 
-        updateMarketCard(symbol);
-
-        if (symbol === state.symbol) {
-          updateSelectedMarket();
-          updateCurrentCandle(
-            state.candles[state.candles.length - 1]
-          );
+        const target = document.querySelector(targets[page]);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
         }
-
-        renderMarketList();
       });
-
-      socket.addEventListener("error", () => {
-        setStatus("Live feed issue; retrying");
-      });
-
-      socket.addEventListener("close", () => {
-        if (state.reconnectTimer) {
-          clearTimeout(state.reconnectTimer);
-        }
-
-        state.reconnectTimer = setTimeout(
-          connectWebSocket,
-          5000
-        );
-      });
-    } catch (error) {
-      console.warn("WebSocket error:", error);
-      setStatus("Using REST market updates");
-    }
-  }
-
-  // ---------- Start dashboard ----------
-
-  async function start() {
-    wireControls();
-    initChart();
-
-    document.querySelectorAll("[data-tf]").forEach((button) => {
-      button.classList.toggle(
-        "active",
-        button.dataset.tf === state.timeframe
-      );
     });
 
-    setStatus("Connecting to market data…");
+    document.addEventListener("click", (event) => {
+      const inside = event.target.closest(
+        "#symbolButton, #marketPicker, #timeframeButton, " +
+        "#timeframeMenu, #indicatorsButton, #indicatorsMenu"
+      );
 
-    await Promise.all([
-      loadAllTickers(),
-      loadCandles(),
-      loadOrderBook()
-    ]);
+      if (!inside) closeMenus(null);
+    });
+  }
 
-    connectWebSocket();
+  async function start() {
+    setupControls();
+    initChart();
+    setSide("Long");
+    renderDemoOrders();
 
-    state.tickerTimer = setInterval(loadAllTickers,
-10000); 
-    state.candleTimer = setInterval(loadCandles, 
-60000); 
-    state.bookTimer = setInterval(loadOrderBook, 
- 5000); 
-   } 
-  
+    await loadCandles();
+    await loadTicker();
+
+    setInterval(loadTicker, 15000);
+  }
+
   document.addEventListener("DOMContentLoaded", 
-start); 
+start);
 })();
