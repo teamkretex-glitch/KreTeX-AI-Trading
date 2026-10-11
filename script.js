@@ -807,4 +807,14 @@
 
     connectWebSocket();
 
-    state.tickerTime
+    state.tickerTimer = setInterval(loadAllTickers,
+10000); 
+    state.candleTimer = setInterval(loadCandles, 
+60000); 
+    state.bookTimer = setInterval(loadOrderBook, 
+ 5000); 
+   } 
+  
+  document.addEventListener("DOMContentLoaded", 
+start); 
+})();
